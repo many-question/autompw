@@ -1,0 +1,4 @@
+#!/bin/csh
+
+source /home/cshrc/.cshrc.mentor22crack
+calibre -drc -hier -turbo 32 -turbo_all -hyper connect /home/jielu/TSMC28/MPW/dummy/dummy_script_ODPO
