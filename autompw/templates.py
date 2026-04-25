@@ -1,5 +1,5 @@
-﻿mpw:
-  name: MPW_2512
+﻿DEFAULT_CONFIG_TEMPLATE = """mpw:
+  name: MPW_TOP
   size_um: [3333, 2222]
   origin: [0, 0]
 
@@ -15,12 +15,12 @@ calibre:
   flows:
     metal:
       enabled: true
-      deck_template: ../deck/dummy_script_metal
+      deck_template: ./deck/dummy_script_metal
       output_suffix: _DM
       summary_name: DM.sum
     odpo:
       enabled: true
-      deck_template: ../deck/dummy_script_ODPO
+      deck_template: ./deck/dummy_script_ODPO
       output_suffix: _DODPO
       summary_name: DODPO.sum
 
@@ -57,7 +57,7 @@ layers:
     ring_width_um: 0.45
 
 gds:
-  topcell: MPW_2512
+  topcell: MPW_TOP
   dbu_um: 0.001
   flatten_final: false
   preserve_child_cells: true
@@ -69,18 +69,19 @@ output:
   final_gds: ./build/mpw_final.gds
 
 designs:
-  - name: HSY
-    gds: ./input/L0_TOP_HSY.gds
-    topcell: L0_TOP_v2
-    size_um: [987.320, 987.320]
-    coord: [1057.000, 0.000]
+  - name: block_a
+    gds: ./input/block_a.gds
+    topcell: BLOCK_A
+    size_um: [500, 500]
+    coord: [0, 0]
     anchor: bottom_left
     replace_with_placeholder: false
 
-  - name: ZSY
-    gds: ./input/L0_TOP_HSY.gds
-    topcell: L0_TOP_v2
-    size_um: [987.320, 987.320]
-    coord: [0.000, 0.000]
+  - name: block_b
+    gds: ./input/block_b.gds
+    topcell: BLOCK_B
+    size_um: [500, 500]
+    coord: [600, 0]
     anchor: bottom_left
     replace_with_placeholder: true
+"""

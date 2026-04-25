@@ -14,7 +14,6 @@ class MPWConfig:
     name: str
     size_um: tuple[float, float]
     origin: tuple[float, float] = (0.0, 0.0)
-    dicing_margin_um: float = 50.0
 
     @property
     def bbox(self) -> BBox:
@@ -128,7 +127,7 @@ def load_config(path: str | Path) -> ProjectConfig:
         raise ValueError("At least one design is required")
 
     spacing_data = data.get("spacing") or {}
-    spacing = float(spacing_data.get("design_to_design_um", mpw.dicing_margin_um))
+    spacing = float(spacing_data.get("design_to_design_um", 50.0))
     gds = _parse_gds(data.get("gds") or {})
 
     return ProjectConfig(
@@ -154,7 +153,6 @@ def _parse_mpw(data: dict[str, Any]) -> MPWConfig:
         name=str(data.get("name") or "MPW_TOP"),
         size_um=_pair_float(data.get("size_um"), "mpw.size_um"),
         origin=_pair_float(data.get("origin", [0, 0]), "mpw.origin"),
-        dicing_margin_um=float(data.get("dicing_margin_um", 50.0)),
     )
 
 

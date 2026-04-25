@@ -12,8 +12,19 @@ from .dummy import run_mpw_dummy_fill, run_placeholders
 from .framework import generate_framework
 from .gds_io import inspect_gds
 from .report import check_project
+from .templates import DEFAULT_CONFIG_TEMPLATE
 
 app = typer.Typer(no_args_is_help=True)
+
+
+@app.command()
+def init(config: Path = typer.Argument(Path("mpw_config.yaml"))) -> None:
+    if config.exists():
+        typer.echo(f"ERROR: {config} already exists")
+        raise typer.Exit(1)
+    config.parent.mkdir(parents=True, exist_ok=True)
+    config.write_text(DEFAULT_CONFIG_TEMPLATE, encoding="utf-8")
+    typer.echo(str(config))
 
 
 @app.command()

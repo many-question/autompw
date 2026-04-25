@@ -19,6 +19,19 @@ pip install pytest
 autompw --help
 ```
 
+确认仓库内 Linux 可执行入口可用：
+
+```bash
+./bin/autompw --help
+```
+
+确认可以生成模板配置：
+
+```bash
+autompw init /tmp/mpw_config.yaml
+test -f /tmp/mpw_config.yaml
+```
+
 ## 2. 跑单元测试
 
 ```bash
