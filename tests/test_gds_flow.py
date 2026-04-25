@@ -50,6 +50,11 @@ designs:
 
     assert framework.exists()
     assert final.exists()
+    framework_layout = read_layout(framework)
+    framework_top = get_top_cell(framework_layout, "MPW_TEST")
+    marker_layer = framework_layout.layer(0, 0)
+    marker_boxes = [shape.box for shape in framework_top.shapes(marker_layer).each() if shape.is_box()]
+    assert kdb.Box(0, 0, 100000, 100000) in marker_boxes
     final_layout = read_layout(final)
     top = get_top_cell(final_layout, "MPW_TEST")
     assert top.bbox().width() > 0

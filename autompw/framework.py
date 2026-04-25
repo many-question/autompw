@@ -15,6 +15,7 @@ def generate_framework(config: ProjectConfig, output_path: Path | None = None) -
     top = layout.create_cell(config.topcell)
 
     marker_layer = layer_index(layout, config.layers.marker)
+    top.shapes(marker_layer).insert(box_from_bbox(config.mpw.bbox, layout.dbu))
     for design in config.designs:
         _insert_design_markers(layout, top, design, marker_layer, config)
 

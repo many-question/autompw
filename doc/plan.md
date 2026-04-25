@@ -194,7 +194,8 @@ spacing:
 framework GDS 内容：
 
 1. MPW 外框
-   - 可选放在 marker 层或单独 frame 层。
+   - 必须在 marker 层生成一个覆盖整个 MPW 尺寸的 rectangle。
+   - 默认层：`0/0`。
 
 2. 子设计位置标记层
    - 默认层：`0/0`。
