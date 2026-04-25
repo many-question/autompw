@@ -17,7 +17,7 @@ def generate_framework(config: ProjectConfig, output_path: Path | None = None) -
     marker_layer = layer_index(layout, config.layers.marker)
     top.shapes(marker_layer).insert(box_from_bbox(config.mpw.bbox, layout.dbu))
     for design in config.designs:
-        _insert_design_markers(layout, top, design, marker_layer, config)
+        _insert_design_markers(layout, top, design, marker_layer, config, config.mpw.bbox)
 
     write_layout(layout, out)
     return out
@@ -30,8 +30,8 @@ def generate_blank_blocker(config: ProjectConfig, design: DesignConfig, output_p
     marker_layer = layer_index(layout, config.layers.marker)
     top.shapes(marker_layer).insert(box_from_bbox(local_bbox, layout.dbu))
 
-    _insert_blocker_layers(layout, top, local_bbox, config)
-    _insert_edge_layers(layout, top, local_bbox, config)
+    _insert_blocker_layers(layout, top, local_bbox, config, local_bbox)
+    _insert_edge_layers(layout, top, local_bbox, config, local_bbox)
     write_layout(layout, output_path)
     return output_path
 
@@ -42,27 +42,45 @@ def _insert_design_markers(
     design: DesignConfig,
     marker_layer: int,
     config: ProjectConfig,
+    clip_bbox: BBox,
 ) -> None:
     bbox = design.bbox
     top.shapes(marker_layer).insert(box_from_bbox(bbox, layout.dbu))
-    _insert_blocker_layers(layout, top, bbox, config)
-    _insert_edge_layers(layout, top, bbox, config)
+    _insert_blocker_layers(layout, top, bbox, config, clip_bbox)
+    _insert_edge_layers(layout, top, bbox, config, clip_bbox)
 
 
-def _insert_blocker_layers(layout: kdb.Layout, top: kdb.Cell, bbox: BBox, config: ProjectConfig) -> None:
+def _insert_blocker_layers(
+    layout: kdb.Layout,
+    top: kdb.Cell,
+    bbox: BBox,
+    config: ProjectConfig,
+    clip_bbox: BBox,
+) -> None:
+    clip_region = kdb.Region(box_from_bbox(clip_bbox, layout.dbu))
     for blocker in config.layers.dummy_blocker:
         grow = blocker.grow_um
         grown = BBox(bbox.xmin - grow, bbox.ymin - grow, bbox.xmax + grow, bbox.ymax + grow)
-        top.shapes(layer_index(layout, blocker.layer)).insert(box_from_bbox(grown, layout.dbu))
+        clipped = kdb.Region(box_from_bbox(grown, layout.dbu)) & clip_region
+        if not clipped.is_empty():
+            top.shapes(layer_index(layout, blocker.layer)).insert(clipped)
 
 
-def _insert_edge_layers(layout: kdb.Layout, top: kdb.Cell, bbox: BBox, config: ProjectConfig) -> None:
+def _insert_edge_layers(
+    layout: kdb.Layout,
+    top: kdb.Cell,
+    bbox: BBox,
+    config: ProjectConfig,
+    clip_bbox: BBox,
+) -> None:
     if not config.layers.edge_fill_layers:
         return
     width = config.layers.edge_fill_width_um
     outer = box_from_bbox(BBox(bbox.xmin - width, bbox.ymin - width, bbox.xmax + width, bbox.ymax + width), layout.dbu)
     inner = box_from_bbox(bbox, layout.dbu)
-    ring = kdb.Region(outer) - kdb.Region(inner)
+    ring = (kdb.Region(outer) - kdb.Region(inner)) & kdb.Region(box_from_bbox(clip_bbox, layout.dbu))
+    if ring.is_empty():
+        return
     for layer in config.layers.edge_fill_layers:
         top.shapes(layer_index(layout, layer)).insert(ring)
 

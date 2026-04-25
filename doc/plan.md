@@ -206,12 +206,14 @@ framework GDS 内容：
    - 默认层：`150.x`。
    - 由 marker bbox 按每个 blocker 层独立配置的 `grow_um` 外扩生成。
    - 不同 dummy blocker 层可以使用不同外扩值，例如 `150/0` 外扩 `1um`，`150/1` 外扩 `3um`。
+   - 外扩后的图形必须 clip 到 MPW bbox 内，避免超出流片边界。
    - 配置解析时应同时支持显式对象格式，并可选兼容简单列表格式。
 
 4. 边缘补充层
    - 默认层：`5/0`、`162/2`。
    - 在 marker bbox 外包 `0.45um` 的边缘 ring。
    - 建议实现为外矩形减内矩形的 ring polygon，避免覆盖整个子设计区域。
+   - ring 图形必须 clip 到 MPW bbox 内。
 
 5. GDS 单位
    - 内部统一使用 `um`。

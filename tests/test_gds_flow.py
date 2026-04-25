@@ -90,6 +90,48 @@ designs:
     assert top.bbox().height() == 8000
 
 
+def test_framework_clips_expanded_layers_to_mpw_bbox(tmp_path: Path):
+    config = tmp_path / "config.yaml"
+    config.write_text(
+        """
+mpw:
+  name: MPW_TEST
+  size_um: [100, 100]
+layers:
+  marker: [0, 0]
+  dummy_blocker:
+    layers:
+      - layer: [150, 0]
+        grow_um: 5
+  edge_fill:
+    layers: [[5, 0]]
+    ring_width_um: 2
+output:
+  framework_gds: ./build/framework.gds
+  final_gds: ./build/final.gds
+designs:
+  - name: block
+    gds: ./block.gds
+    size_um: [10, 10]
+    coord: [0, 0]
+    anchor: bottom_left
+""",
+        encoding="utf-8",
+    )
+    project = load_config(config)
+    framework = generate_framework(project)
+    layout = read_layout(framework)
+    top = get_top_cell(layout, "MPW_TEST")
+
+    blocker_region = kdb.Region(top.begin_shapes_rec(layout.layer(150, 0)))
+    edge_region = kdb.Region(top.begin_shapes_rec(layout.layer(5, 0)))
+
+    assert blocker_region.bbox().left == 0
+    assert blocker_region.bbox().bottom == 0
+    assert edge_region.bbox().left == 0
+    assert edge_region.bbox().bottom == 0
+
+
 def _write_mock_block(path: Path) -> None:
     layout = kdb.Layout()
     layout.dbu = 0.001

@@ -295,6 +295,8 @@ layers:
 
 每个 dummy blocker 层都可以独立设置外扩尺寸。
 
+在 framework GDS 中，dummy blocker 外扩图形和 edge fill ring 都会被裁剪到 MPW bbox 内，避免超出流片边界。生成子设计 blank blocker GDS 时，裁剪范围为该子设计的本地尺寸 `[0, 0, width, height]`。
+
 ### GDS 设置
 
 ```yaml
