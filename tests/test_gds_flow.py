@@ -4,7 +4,7 @@ import klayout.db as kdb
 
 from autompw.assemble import assemble
 from autompw.config import load_config
-from autompw.framework import generate_blank_blocker, generate_framework
+from autompw.framework import generate_blank_placeholder, generate_framework
 from autompw.gds_io import get_top_cell, read_layout
 
 
@@ -60,7 +60,7 @@ designs:
     assert top.bbox().width() > 0
 
 
-def test_blank_blocker_uses_design_size(tmp_path: Path):
+def test_blank_placeholder_uses_design_size_and_marker_only(tmp_path: Path):
     config = tmp_path / "config.yaml"
     config.write_text(
         """
@@ -83,11 +83,13 @@ designs:
     )
     project = load_config(config)
     out = tmp_path / "blank.gds"
-    generate_blank_blocker(project, project.designs[0], out)
+    generate_blank_placeholder(project, project.designs[0], out)
     blank_layout = read_layout(out)
-    top = get_top_cell(blank_layout, "DUMMY_block")
+    top = get_top_cell(blank_layout, "PLACEHOLDER_block")
     assert top.bbox().width() == 12000
     assert top.bbox().height() == 8000
+    assert top.begin_shapes_rec(blank_layout.layer(150, 0)).at_end()
+    assert top.begin_shapes_rec(blank_layout.layer(5, 0)).at_end()
 
 
 def test_framework_clips_expanded_layers_to_mpw_bbox(tmp_path: Path):

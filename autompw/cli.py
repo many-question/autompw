@@ -8,7 +8,7 @@ import typer
 
 from .assemble import assemble as assemble_gds
 from .config import load_config
-from .dummy import run_dummy_blockers, run_mpw_dummy_fill
+from .dummy import run_mpw_dummy_fill, run_placeholders
 from .framework import generate_framework
 from .gds_io import inspect_gds
 from .report import check_project
@@ -45,10 +45,10 @@ def dummy_fill(config: Path, dry_run: bool = False) -> None:
         typer.echo(str(output))
 
 
-@app.command("dummy-blockers")
-def dummy_blockers(config: Path, dry_run: bool = False) -> None:
+@app.command("placeholders")
+def placeholders(config: Path, dry_run: bool = False) -> None:
     project = load_config(config)
-    outputs = run_dummy_blockers(project, dry_run=dry_run)
+    outputs = run_placeholders(project, dry_run=dry_run)
     for output in outputs:
         typer.echo(str(output))
 
@@ -70,7 +70,7 @@ def run_all(config: Path, dry_run_calibre: bool = False) -> None:
         raise typer.Exit(1)
     generate_framework(project)
     run_mpw_dummy_fill(project, dry_run=dry_run_calibre)
-    run_dummy_blockers(project, dry_run=dry_run_calibre)
+    run_placeholders(project, dry_run=dry_run_calibre)
     out = assemble_gds(project, strict_dummy=not dry_run_calibre)
     typer.echo(str(out))
 

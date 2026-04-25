@@ -4,7 +4,13 @@ from pathlib import Path
 
 from .calibre import CalibreTask, enabled_flows, run_calibre
 from .config import DesignConfig, ProjectConfig
-from .framework import blocker_blank_path, blocker_output_base, generate_blank_blocker, generate_framework, mpw_dummy_output_base
+from .framework import (
+    generate_blank_placeholder,
+    generate_framework,
+    mpw_dummy_output_base,
+    placeholder_blank_path,
+    placeholder_output_base,
+)
 
 
 def build_mpw_dummy_tasks(config: ProjectConfig) -> list[CalibreTask]:
@@ -33,12 +39,12 @@ def build_mpw_dummy_tasks(config: ProjectConfig) -> list[CalibreTask]:
     return tasks
 
 
-def build_blocker_dummy_tasks(config: ProjectConfig, design: DesignConfig) -> list[CalibreTask]:
-    input_gds = blocker_blank_path(config, design)
-    topcell = f"DUMMY_{design.name}"
+def build_placeholder_tasks(config: ProjectConfig, design: DesignConfig) -> list[CalibreTask]:
+    input_gds = placeholder_blank_path(config, design)
+    topcell = f"PLACEHOLDER_{design.name}"
     tasks = []
     for flow_name, flow in enabled_flows(config).items():
-        base = blocker_output_base(config, design, flow_name)
+        base = placeholder_output_base(config, design, flow_name)
         output_gds = base / f"{design.name}{flow.output_suffix}.gds"
         tasks.append(
             CalibreTask(
@@ -69,12 +75,12 @@ def run_mpw_dummy_fill(config: ProjectConfig, dry_run: bool = False) -> list[Pat
     return outputs
 
 
-def run_dummy_blockers(config: ProjectConfig, dry_run: bool = False) -> list[Path]:
+def run_placeholders(config: ProjectConfig, dry_run: bool = False) -> list[Path]:
     outputs = []
     for design in config.designs:
-        blank = blocker_blank_path(config, design)
-        generate_blank_blocker(config, design, blank)
-        for task in build_blocker_dummy_tasks(config, design):
+        blank = placeholder_blank_path(config, design)
+        generate_blank_placeholder(config, design, blank)
+        for task in build_placeholder_tasks(config, design):
             run_calibre(config, task, dry_run=dry_run)
             outputs.append(task.output_gds)
     return outputs

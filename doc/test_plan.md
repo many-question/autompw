@@ -143,15 +143,16 @@ examples/build/calibre/mpw/odpo/MPW_2512_DODPO.gds
 - rendered deck 中的输入 GDS、topcell、输出路径是否正确。
 - Calibre log 文件中的错误信息。
 
-## 8. blocker dry-run
+## 8. placeholder dry-run
 
 ```bash
-autompw dummy-blockers examples/mpw_2512.yaml --dry-run
+autompw placeholders examples/mpw_2512.yaml --dry-run
 ```
 
 该命令会：
 
-- 为每个 design 生成 blank GDS。
+- 为每个 design 生成 blank placeholder GDS。
+- blank placeholder GDS 只包含 marker 层，不包含 dummy blocker 或 edge fill 层。
 - 按每个 block 的尺寸渲染独立 deck。
 - 为每个 enabled flow 生成独立日志和 rendered deck。
 
@@ -183,7 +184,7 @@ autompw inspect-gds examples/build/mpw_final.gds
 第一轮建议只放一个小 block：
 
 ```text
-check -> framework -> dummy-fill --dry-run -> dummy-blockers --dry-run
+check -> framework -> dummy-fill --dry-run -> placeholders --dry-run
 ```
 
 确认路径、topcell、尺寸窗口和输出命名都正确后，再运行真实 Calibre。
@@ -191,5 +192,5 @@ check -> framework -> dummy-fill --dry-run -> dummy-blockers --dry-run
 第二轮再扩展到完整 MPW：
 
 ```text
-check -> framework -> dummy-fill -> dummy-blockers -> assemble
+check -> framework -> dummy-fill -> placeholders -> assemble
 ```

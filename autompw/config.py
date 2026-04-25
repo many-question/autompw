@@ -82,7 +82,7 @@ class DesignConfig:
     coord: tuple[float, float]
     anchor: Anchor
     topcell: str | None = None
-    replace_with_dummy: bool = False
+    replace_with_placeholder: bool = False
 
     @property
     def bbox(self) -> BBox:
@@ -226,5 +226,5 @@ def _parse_design(data: dict[str, Any]) -> DesignConfig:
         size_um=_pair_float(data["size_um"], "design.size_um"),
         coord=_pair_float(data["coord"], "design.coord"),
         anchor=Anchor(data.get("anchor", "bottom_left")),
-        replace_with_dummy=bool(data.get("replace_with_dummy", False)),
+        replace_with_placeholder=bool(data.get("replace_with_placeholder", False)),
     )

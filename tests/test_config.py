@@ -42,3 +42,4 @@ designs:
     assert loaded.layers.dummy_blocker[0].layer == (150, 0)
     assert loaded.layers.dummy_blocker[1].grow_um == 3
     assert loaded.calibre.flows["metal"].output_suffix == "_DM"
+    assert loaded.designs[0].replace_with_placeholder is False

@@ -23,15 +23,13 @@ def generate_framework(config: ProjectConfig, output_path: Path | None = None) -
     return out
 
 
-def generate_blank_blocker(config: ProjectConfig, design: DesignConfig, output_path: Path) -> Path:
+def generate_blank_placeholder(config: ProjectConfig, design: DesignConfig, output_path: Path) -> Path:
     layout = make_layout(config.gds.dbu_um)
-    top = layout.create_cell(f"DUMMY_{design.name}")
+    top = layout.create_cell(f"PLACEHOLDER_{design.name}")
     local_bbox = BBox(0.0, 0.0, design.size_um[0], design.size_um[1])
     marker_layer = layer_index(layout, config.layers.marker)
     top.shapes(marker_layer).insert(box_from_bbox(local_bbox, layout.dbu))
 
-    _insert_blocker_layers(layout, top, local_bbox, config, local_bbox)
-    _insert_edge_layers(layout, top, local_bbox, config, local_bbox)
     write_layout(layout, output_path)
     return output_path
 
@@ -85,12 +83,12 @@ def _insert_edge_layers(
         top.shapes(layer_index(layout, layer)).insert(ring)
 
 
-def blocker_blank_path(config: ProjectConfig, design: DesignConfig) -> Path:
-    return config.resolve(config.output.build_dir) / "dummy_blockers" / f"{design.name}_blank.gds"
+def placeholder_blank_path(config: ProjectConfig, design: DesignConfig) -> Path:
+    return config.resolve(config.output.build_dir) / "placeholders" / f"{design.name}_blank.gds"
 
 
-def blocker_output_base(config: ProjectConfig, design: DesignConfig, flow_name: str) -> Path:
-    return config.resolve(config.calibre.work_dir) / "dummy_blockers" / design.name / flow_name
+def placeholder_output_base(config: ProjectConfig, design: DesignConfig, flow_name: str) -> Path:
+    return config.resolve(config.calibre.work_dir) / "placeholders" / design.name / flow_name
 
 
 def mpw_dummy_output_base(config: ProjectConfig, flow_name: str) -> Path:

@@ -2,7 +2,7 @@
 
 ## 目标
 
-开发一个用于 MPW 流片拼版的 CLI 工具。该工具把多个子设计 GDS 按指定坐标放入一个 MPW 顶层版图中，生成 framework GDS、dummy fill GDS、dummy blocker GDS，并最终输出可交付流片的 MPW GDS。
+开发一个用于 MPW 流片拼版的 CLI 工具。该工具把多个子设计 GDS 按指定坐标放入一个 MPW 顶层版图中，生成 framework GDS、dummy fill GDS、placeholder GDS，并最终输出可交付流片的 MPW GDS。
 
 工具需要支持各步骤单独运行，也需要支持一键执行完整流程。
 
@@ -106,7 +106,7 @@ designs:
     size_um: [800, 600]
     coord: [100, 100]
     anchor: bottom_left
-    replace_with_dummy: false
+    replace_with_placeholder: false
 
   - name: pll_top
     gds: ./input/pll_top.gds
@@ -114,7 +114,7 @@ designs:
     size_um: [600, 500]
     coord: [3000, 2500]
     anchor: top_right
-    replace_with_dummy: true
+    replace_with_placeholder: true
 ```
 
 `anchor` 支持以下值：
@@ -139,7 +139,7 @@ top_right
 autompw check config.yaml
 autompw framework config.yaml
 autompw dummy-fill config.yaml
-autompw dummy-blockers config.yaml
+autompw placeholders config.yaml
 autompw assemble config.yaml
 autompw all config.yaml
 autompw inspect-gds MPW_2512.gds
@@ -150,8 +150,8 @@ autompw inspect-gds MPW_2512.gds
 - `check`：检查拼版方案是否合法。
 - `framework`：生成 framework GDS。
 - `dummy-fill`：基于 framework GDS 调用 dummy filler 生成 dummy fill GDS。
-- `dummy-blockers`：为每个子设计生成 blank GDS 和对应 dummy blocker GDS。
-- `assemble`：合并子设计、framework、dummy fill、dummy blocker，输出最终 MPW GDS。
+- `placeholders`：为每个子设计生成 blank placeholder GDS，并调用 dummy filler 生成对应 placeholder GDS。
+- `assemble`：合并子设计、framework、dummy fill、placeholder，输出最终 MPW GDS。
 - `all`：按顺序执行完整流程。
 - `inspect-gds`：查看 GDS 的 topcell、dbu、bbox、层列表等信息。
 
@@ -233,7 +233,7 @@ framework GDS 内容：
    - 原始 `dummy_script_metal`、`dummy_script_ODPO` 不直接修改。
    - 程序把模板渲染到当前任务的 build 子目录。
    - 只替换运行期字段：输入 GDS、topcell、输出 GDS、summary report、程序根据当前 GDS 任务尺寸自动生成的 chip window 坐标。
-   - 这些运行期字段不在 YAML 中逐项配置，由 `dummy-fill` 或 `dummy-blockers` 阶段根据任务上下文自动派生。
+   - 这些运行期字段不在 YAML 中逐项配置，由 `dummy-fill` 或 `placeholders` 阶段根据任务上下文自动派生。
    - 其他工艺开关和 layer / density / fill 规则仍保留在模板中，允许人工修改。
 5. 调用 Calibre：
    - 使用 YAML 中的 `calibre.executable`。
@@ -267,35 +267,34 @@ VARIABLE yRT   {{ yRT }}
 - metal 和 ODPO deck 的输出语句不同，模板渲染器应按 flow 独立处理。
 - deck 中的 `input_gds`、`input_topcell`、`output_gds`、`summary_report`、`xLB/yLB/xRT/yRT` 不在 YAML 中配置，由程序按当前 dummy 任务自动生成。
 - 跑 MPW dummy fill 时，chip window 使用 MPW 尺寸。
-- 跑子设计 dummy blocker 时，chip window 使用对应子设计尺寸。
+- 跑子设计 placeholder 时，chip window 使用对应子设计尺寸。
 - 默认本地窗口为 `[0, 0, width, height]`；如果后续需要非零原点，可由输入 GDS bbox 或任务上下文派生。
 - MPW dummy fill 的输入 GDS 固定来自 `output.framework_gds`，topcell 来自 `gds.topcell` 或 `mpw.name`，输出 GDS 由任务名、flow 名和 `output_suffix` 组合生成。
-- 子设计 dummy blocker 的输入 GDS 来自该子设计 blank GDS，topcell 由 `DUMMY_<design_name>` 生成，输出 GDS 由子设计名、flow 名和 `output_suffix` 组合生成。
+- 子设计 placeholder 的输入 GDS 来自该子设计 blank GDS，topcell 由 `PLACEHOLDER_<design_name>` 生成，输出 GDS 由子设计名、flow 名和 `output_suffix` 组合生成。
 - 如用户手工修改模板中的其他内容，程序不覆盖这些修改。
 
-## 步骤 4：生成 dummy blocker GDS
+## 步骤 4：生成 placeholder GDS
 
-实现 `autompw dummy-blockers config.yaml`。
+实现 `autompw placeholders config.yaml`。
 
 目标：
 
-为每个子设计生成一个空白替代 GDS，并调用 dummy filler 生成对应 dummy blocker GDS。这样当某个子设计存在问题时，可以用 dummy blocker 临时替换该设计。
+为每个子设计生成一个空白 placeholder GDS，并调用 dummy filler 往其中填充 dummy。这样当某个子设计存在问题时，可以用 placeholder 临时替换该设计。
 
 流程：
 
 1. 对每个子设计创建 blank GDS。
-   - top cell 名：`DUMMY_<design_name>`。
+   - top cell 名：`PLACEHOLDER_<design_name>`。
    - 尺寸等于该子设计 `size_um`。
    - 原点建议为 `(0, 0)`。
 
 2. blank GDS 内容：
    - marker rectangle。
-   - dummy blocker rectangle 或 ring。
-   - 可选 label 标识设计名。
+   - 不写入 dummy blocker、edge fill 或其他层。
 
 3. 按每个 block 的任务上下文渲染 deck 模板并调用 dummy filler。
    - 输入 GDS 使用该子设计生成的 blank GDS。
-   - topcell 使用 `DUMMY_<design_name>`。
+   - topcell 使用 `PLACEHOLDER_<design_name>`。
    - chip window 使用该子设计尺寸，默认为 `[0, 0, width, height]`。
    - 输出 GDS 名由子设计名、flow 名和全局 `calibre.flows.<flow>.output_suffix` 组合生成。
    - 每个 block、每个 enabled flow 都应生成独立 rendered deck 和独立日志，避免不同任务互相覆盖。
@@ -304,7 +303,7 @@ VARIABLE yRT   {{ yRT }}
 4. 输出文件：
 
 ```text
-build/dummy_blockers/
+build/placeholders/
   adc_top_blank.gds
   adc_top_dummy.gds
   pll_top_blank.gds
@@ -321,8 +320,8 @@ build/dummy_blockers/
 2. 引入 framework GDS。
 3. 引入 dummy fill GDS。
 4. 遍历每个子设计：
-   - `replace_with_dummy: false` 时引用原始子设计 GDS。
-   - `replace_with_dummy: true` 时引用对应 dummy blocker GDS。
+   - `replace_with_placeholder: false` 时引用原始子设计 GDS。
+   - `replace_with_placeholder: true` 时引用对应 placeholder GDS。
 5. 按配置中的坐标和 anchor 放置。
 6. 输出最终 `mpw_final.gds`。
 7. 生成 placement manifest，记录每个子设计的实际放置 bbox 和替换状态。
@@ -450,11 +449,11 @@ Calibre 相关测试作为 integration test：
 - 检查返回码和输出文件。
 - 支持只运行指定 dummy flow。
 
-### 里程碑 6：dummy blocker flow
+### 里程碑 6：placeholder flow
 
 - 生成每个子设计的 blank GDS。
 - 根据每个子设计尺寸和 blank GDS 信息渲染独立 deck。
-- 调用 Calibre 生成每个子设计的 dummy blocker GDS。
+- 调用 Calibre 生成每个子设计的 placeholder GDS。
 - 在 assemble 阶段按配置替换子设计。
 
 ### 里程碑 7：文档和样例
@@ -486,8 +485,8 @@ Calibre 相关测试作为 integration test：
    - 多个子设计可能存在同名 cell。
    - assemble 阶段需要支持自动 rename 或 namespace 前缀。
 
-6. dummy blocker 与真实子设计替换的一致性
-   - dummy blocker GDS 的本地原点、尺寸、topcell bbox 必须与被替换子设计一致。
+6. placeholder 与真实子设计替换的一致性
+   - placeholder GDS 的本地原点、尺寸、topcell bbox 必须与被替换子设计一致。
 
 ## 推荐实施顺序
 
@@ -502,7 +501,7 @@ check -> framework -> assemble
 第二版再完成：
 
 ```text
-dummy-fill -> dummy-blockers -> replacement assemble
+dummy-fill -> placeholders -> replacement assemble
 ```
 
 这样可以把 foundry dummy flow 的不确定性隔离到后续阶段，降低第一版开发风险。

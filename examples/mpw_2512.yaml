@@ -76,7 +76,7 @@ designs:
     size_um: [987.320, 987.320]
     coord: [1057.000, 0.000]
     anchor: bottom_left
-    replace_with_dummy: false
+    replace_with_placeholder: false
 
   - name: ZSY
     gds: ./input/L0_TOP_HSY.gds
@@ -84,4 +84,4 @@ designs:
     size_um: [987.320, 987.320]
     coord: [0.000, 0.000]
     anchor: bottom_left
-    replace_with_dummy: true
+    replace_with_placeholder: true

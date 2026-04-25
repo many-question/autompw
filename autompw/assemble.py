@@ -7,7 +7,7 @@ from pathlib import Path
 import klayout.db as kdb
 
 from .config import DesignConfig, ProjectConfig
-from .dummy import build_blocker_dummy_tasks, build_mpw_dummy_tasks
+from .dummy import build_mpw_dummy_tasks, build_placeholder_tasks
 from .gds_io import dbu_to_iu, get_top_cell, make_layout, read_layout, write_layout
 
 
@@ -35,7 +35,7 @@ def assemble(config: ProjectConfig, output_path: Path | None = None, strict_dumm
                 "source": str(source),
                 "topcell": topcell,
                 "placed_bbox_um": bbox.as_list(),
-                "replaced_with_dummy": design.replace_with_dummy,
+                "replaced_with_placeholder": design.replace_with_placeholder,
             }
         )
 
@@ -48,15 +48,15 @@ def assemble(config: ProjectConfig, output_path: Path | None = None, strict_dumm
 
 
 def _design_source(config: ProjectConfig, design: DesignConfig, strict_dummy: bool) -> tuple[Path, str | None]:
-    if not design.replace_with_dummy:
+    if not design.replace_with_placeholder:
         return config.resolve(design.gds), design.topcell
 
-    blocker_outputs = [task.output_gds for task in build_blocker_dummy_tasks(config, design)]
-    existing = [path for path in blocker_outputs if path.exists()]
+    placeholder_outputs = [task.output_gds for task in build_placeholder_tasks(config, design)]
+    existing = [path for path in placeholder_outputs if path.exists()]
     if existing:
         return existing[0], None
     if strict_dummy:
-        raise FileNotFoundError(f"No dummy blocker GDS found for {design.name}: {blocker_outputs}")
+        raise FileNotFoundError(f"No placeholder GDS found for {design.name}: {placeholder_outputs}")
     return config.resolve(design.gds), design.topcell
 
 
