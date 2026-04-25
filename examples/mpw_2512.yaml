@@ -16,12 +16,12 @@ calibre:
   flows:
     metal:
       enabled: true
-      deck_template: ../dummy_script_metal
+      deck_template: ./deck/dummy_script_metal
       output_suffix: _DM
       summary_name: DM.sum
     odpo:
       enabled: true
-      deck_template: ../dummy_script_ODPO
+      deck_template: ./deck/dummy_script_ODPO
       output_suffix: _DODPO
       summary_name: DODPO.sum
 
@@ -29,10 +29,28 @@ layers:
   marker: [0, 0]
   dummy_blocker:
     layers:
-      - layer: [150, 0]
-        grow_um: 1
       - layer: [150, 1]
+        grow_um: 1
+      - layer: [150, 2]
+        grow_um: 1
+      - layer: [150, 3]
+        grow_um: 1
+      - layer: [150, 4]
+        grow_um: 1
+      - layer: [150, 5]
+        grow_um: 1
+      - layer: [150, 6]
+        grow_um: 1
+      - layer: [150, 7]
+        grow_um: 1
+      - layer: [150, 8]
+        grow_um: 1
+      - layer: [150, 9]
         grow_um: 3
+      - layer: [150, 20]
+        grow_um: 1
+      - layer: [150, 21]
+        grow_um: 1
   edge_fill:
     layers:
       - [5, 0]
@@ -41,7 +59,7 @@ layers:
 
 gds:
   topcell: MPW_2512
-  dbu_um: 0.001
+  dbu_um: 0.005
   flatten_final: false
   preserve_child_cells: true
   allow_cell_rename: true
@@ -52,10 +70,18 @@ output:
   final_gds: ./build/mpw_final.gds
 
 designs:
-  - name: example_block
-    gds: ./input/example_block.gds
-    topcell: EXAMPLE_BLOCK
-    size_um: [500, 500]
-    coord: [0, 0]
+  - name: HSY
+    gds: ./input/L0_TOP_HSY.gds
+    topcell: L0_TOP_v2
+    size_um: [987.320, 987.320]
+    coord: [1057.000, 0.000]
     anchor: bottom_left
     replace_with_dummy: false
+
+  - name: ZSY
+    gds: ./input/L0_TOP_HSY.gds
+    topcell: L0_TOP_v2
+    size_um: [987.320, 987.320]
+    coord: [0.000, 0.000]
+    anchor: bottom_left
+    replace_with_dummy: true

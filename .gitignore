@@ -43,3 +43,5 @@ Thumbs.db
 # Large local input/output data should be added intentionally with git add -f
 input/
 output/
+
+*.gds
