@@ -206,12 +206,11 @@ PRECISION    1000
 RESOLUTION      5                               // tool resolution
 
 LAYOUT SYSTEM GDSII
-LAYOUT PATH "/home/jielu/TSMC28/MPW/dummy/MPW_2512.gds"                       // GDS file name
-LAYOUT PRIMARY "MPW_2512"                    // top cell name
-//DRC RESULTS DATABASE "DM.gds" GDSII             // Output topcell name is the same as the original layout,
+LAYOUT PATH " "                       // GDS file name
+LAYOUT PRIMARY " "                    // top cell name
                                                 // please do not stream-in to the library of original design.
-DRC RESULTS DATABASE "./MPW_2512_DM.gds" GDSII _DM       // Output topcell name will be suffixed by _DM
-DRC SUMMARY REPORT "DM.sum"
+DRC RESULTS DATABASE " " GDSII _DM       // Output topcell name will be suffixed by _DM
+DRC SUMMARY REPORT " "
 
 DRC MAXIMUM RESULTS ALL
 DRC KEEP EMPTY NO
@@ -223,8 +222,8 @@ DRC KEEP EMPTY NO
 #DEFINE ChipWindowUsed    // use specified coordinate to define the chip window
 VARIABLE xLB   0.0          // x-coordinate of left-bottom corner for user defined chip window
 VARIABLE yLB   0.0          // y-coordinate of left-bottom corner for user defined chip window
-VARIABLE xRT   3333       // x-coordinate of right-top corner for user defined chip window
-VARIABLE yRT   2222       // y-coordinate of right-top corner for user defined chip window
+VARIABLE xRT   0.0       // x-coordinate of right-top corner for user defined chip window
+VARIABLE yRT   0.0       // y-coordinate of right-top corner for user defined chip window
 LAYER ChipWindow 1000
 
 //******* Option for chip corner empty area definition ***********************

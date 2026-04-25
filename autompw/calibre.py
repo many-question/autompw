@@ -74,7 +74,9 @@ def run_calibre(config: ProjectConfig, task: CalibreTask, dry_run: bool = False)
         return None
 
     if config.calibre.shell:
-        shell_command = [config.calibre.shell, "-lc", command]
+        shell_name = Path(config.calibre.shell).name
+        shell_flag = "-c" if shell_name in {"csh", "tcsh"} else "-lc"
+        shell_command = [config.calibre.shell, shell_flag, command]
     else:
         shell_command = ["/bin/sh", "-lc", command]
     result = subprocess.run(shell_command, text=True, capture_output=True, check=False)

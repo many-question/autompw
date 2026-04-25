@@ -114,17 +114,17 @@ PRECISION    1000
 RESOLUTION      5                               // tool resolution
 
 LAYOUT SYSTEM GDSII
-LAYOUT PATH "/home/jielu/TSMC28/MPW/dummy/MPW_2512.gds"                       // GDS file name
-LAYOUT PRIMARY "MPW_2512"                    // top cell name
+LAYOUT PATH " "                       // GDS file name
+LAYOUT PRIMARY " "                    // top cell name
 //***** Output database *************************
 #DEFINE OUTPUT_GDS                      // turn on to output GDS; turn off to output OASIS
 #IFDEF OUTPUT_GDS
-DFM DEFAULTS RDB GDS FILE "./MPW_2512_DODPO.gds" 
+DFM DEFAULTS RDB GDS FILE " " 
 #ELSE
 DFM DEFAULTS RDB OASIS FILE "DODPO.oas"
 #ENDIF
-DRC RESULTS DATABASE "DODPO.db"
-DRC SUMMARY REPORT "DODPO.sum"
+DRC RESULTS DATABASE " "
+DRC SUMMARY REPORT " "
 DRC MAXIMUM RESULTS ALL
 DRC KEEP EMPTY NO
 //LAYOUT ALLOW DUPLICATE CELL YES
@@ -135,8 +135,8 @@ DRC KEEP EMPTY NO
 #DEFINE ChipWindowUsed    // use specified coordinate to define the chip window
 VARIABLE xLB   0.0          // x-coordinate of left-bottom corner for user defined chip window
 VARIABLE yLB   0.0          // y-coordinate of left-bottom corner for user defined chip window
-VARIABLE xRT   3333       // x-coordinate of right-top corner for user defined chip window
-VARIABLE yRT   2222       // y-coordinate of right-top corner for user defined chip window
+VARIABLE xRT   0.0       // x-coordinate of right-top corner for user defined chip window
+VARIABLE yRT   0.0       // y-coordinate of right-top corner for user defined chip window
 LAYER ChipWindow 1000
 
 //******* Option for chip corner empty area definition ***********************

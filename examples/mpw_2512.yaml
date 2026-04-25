@@ -10,18 +10,18 @@ spacing:
 calibre:
   executable: calibre
   shell: csh
-  setup_script: /home/cshrc/.cshrc.mentor22crack
-  args: "-drc -hier -turbo 32 -turbo_all -hyper connect"
+  setup_script: /edamgr/setup_calibre.csh
+  args: "-drc -hier -turbo 8 -turbo_all -hyper connect"
   work_dir: ./build/calibre
   flows:
     metal:
       enabled: true
-      deck_template: ./deck/dummy_script_metal
+      deck_template: ../deck/dummy_script_metal
       output_suffix: _DM
       summary_name: DM.sum
     odpo:
       enabled: true
-      deck_template: ./deck/dummy_script_ODPO
+      deck_template: ../deck/dummy_script_ODPO
       output_suffix: _DODPO
       summary_name: DODPO.sum
 
@@ -59,7 +59,7 @@ layers:
 
 gds:
   topcell: MPW_2512
-  dbu_um: 0.005
+  dbu_um: 0.001
   flatten_final: false
   preserve_child_cells: true
   allow_cell_rename: true
