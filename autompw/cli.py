@@ -12,23 +12,24 @@ from .dummy import run_mpw_dummy_fill, run_placeholders
 from .framework import generate_framework
 from .gds_io import inspect_gds
 from .report import check_project
-from .templates import DEFAULT_CONFIG_TEMPLATE
+from .templates import init_process
 
 app = typer.Typer(no_args_is_help=True)
+DEFAULT_CONFIG = Path("mpw_config.yaml")
 
 
 @app.command()
-def init(config: Path = typer.Argument(Path("mpw_config.yaml"))) -> None:
-    if config.exists():
-        typer.echo(f"ERROR: {config} already exists")
+def init(process: str = typer.Argument(...)) -> None:
+    try:
+        config = init_process(process, Path.cwd())
+    except (FileExistsError, FileNotFoundError, ValueError) as exc:
+        typer.echo(f"ERROR: {exc}")
         raise typer.Exit(1)
-    config.parent.mkdir(parents=True, exist_ok=True)
-    config.write_text(DEFAULT_CONFIG_TEMPLATE, encoding="utf-8")
     typer.echo(str(config))
 
 
 @app.command()
-def check(config: Path, report: Optional[Path] = None) -> None:
+def check(config: Path = typer.Argument(DEFAULT_CONFIG), report: Optional[Path] = None) -> None:
     project = load_config(config)
     issues = check_project(project)
     if report:
@@ -42,14 +43,14 @@ def check(config: Path, report: Optional[Path] = None) -> None:
 
 
 @app.command()
-def framework(config: Path) -> None:
+def framework(config: Path = typer.Argument(DEFAULT_CONFIG)) -> None:
     project = load_config(config)
     out = generate_framework(project)
     typer.echo(str(out))
 
 
 @app.command("dummy-fill")
-def dummy_fill(config: Path, dry_run: bool = False) -> None:
+def dummy_fill(config: Path = typer.Argument(DEFAULT_CONFIG), dry_run: bool = False) -> None:
     project = load_config(config)
     outputs = run_mpw_dummy_fill(project, dry_run=dry_run)
     for output in outputs:
@@ -57,7 +58,7 @@ def dummy_fill(config: Path, dry_run: bool = False) -> None:
 
 
 @app.command("placeholders")
-def placeholders(config: Path, dry_run: bool = False) -> None:
+def placeholders(config: Path = typer.Argument(DEFAULT_CONFIG), dry_run: bool = False) -> None:
     project = load_config(config)
     outputs = run_placeholders(project, dry_run=dry_run)
     for output in outputs:
@@ -65,14 +66,14 @@ def placeholders(config: Path, dry_run: bool = False) -> None:
 
 
 @app.command()
-def assemble(config: Path, strict_dummy: bool = True) -> None:
+def assemble(config: Path = typer.Argument(DEFAULT_CONFIG), strict_dummy: bool = True) -> None:
     project = load_config(config)
     out = assemble_gds(project, strict_dummy=strict_dummy)
     typer.echo(str(out))
 
 
 @app.command("all")
-def run_all(config: Path, dry_run_calibre: bool = False) -> None:
+def run_all(config: Path = typer.Argument(DEFAULT_CONFIG), dry_run_calibre: bool = False) -> None:
     project = load_config(config)
     issues = check_project(project)
     if issues:

@@ -12,6 +12,16 @@ dependencies = [
 [project.scripts]
 autompw = "autompw.cli:app"
 
+[tool.setuptools]
+packages = ["autompw"]
+
+[tool.setuptools.data-files]
+"templates/tsmc28" = ["templates/tsmc28/mpw_config.yaml"]
+"templates/tsmc28/deck" = [
+  "templates/tsmc28/deck/dmfill_metal",
+  "templates/tsmc28/deck/dmfill_odpo",
+]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]

@@ -189,14 +189,6 @@
 
 
 
-
-
-
-
-
-
-
-
 /* SWITCH DEFINITION START */
 
 #IFNDEF COMBINE_DODPO_DMVIA
@@ -208,7 +200,6 @@ RESOLUTION      5                               // tool resolution
 LAYOUT SYSTEM GDSII
 LAYOUT PATH " "                       // GDS file name
 LAYOUT PRIMARY " "                    // top cell name
-                                                // please do not stream-in to the library of original design.
 DRC RESULTS DATABASE " " GDSII _DM       // Output topcell name will be suffixed by _DM
 DRC SUMMARY REPORT " "
 

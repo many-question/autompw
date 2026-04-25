@@ -1,87 +1,58 @@
-﻿DEFAULT_CONFIG_TEMPLATE = """mpw:
-  name: MPW_TOP
-  size_um: [3333, 2222]
-  origin: [0, 0]
+from __future__ import annotations
 
-spacing:
-  design_to_design_um: 50
+import os
+import shutil
+import sys
+from pathlib import Path
 
-calibre:
-  executable: calibre
-  shell: csh
-  setup_script: /edamgr/setup_calibre.csh
-  args: "-drc -hier -turbo 8 -turbo_all -hyper connect"
-  work_dir: ./build/calibre
-  flows:
-    metal:
-      enabled: true
-      deck_template: ./deck/dummy_script_metal
-      output_suffix: _DM
-      summary_name: DM.sum
-    odpo:
-      enabled: true
-      deck_template: ./deck/dummy_script_ODPO
-      output_suffix: _DODPO
-      summary_name: DODPO.sum
 
-layers:
-  marker: [0, 0]
-  dummy_blocker:
-    layers:
-      - layer: [150, 1]
-        grow_um: 1
-      - layer: [150, 2]
-        grow_um: 1
-      - layer: [150, 3]
-        grow_um: 1
-      - layer: [150, 4]
-        grow_um: 1
-      - layer: [150, 5]
-        grow_um: 1
-      - layer: [150, 6]
-        grow_um: 1
-      - layer: [150, 7]
-        grow_um: 1
-      - layer: [150, 8]
-        grow_um: 1
-      - layer: [150, 9]
-        grow_um: 3
-      - layer: [150, 20]
-        grow_um: 1
-      - layer: [150, 21]
-        grow_um: 1
-  edge_fill:
-    layers:
-      - [5, 0]
-      - [162, 2]
-    ring_width_um: 0.45
+def template_root() -> Path:
+    override = os.environ.get("AUTOMPW_TEMPLATE_DIR")
+    if override:
+        return Path(override).expanduser().resolve()
+    candidates = [
+        Path(__file__).resolve().parent.parent / "templates",
+        Path(sys.prefix) / "templates",
+    ]
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return candidates[0]
 
-gds:
-  topcell: MPW_TOP
-  dbu_um: 0.001
-  flatten_final: false
-  preserve_child_cells: true
-  allow_cell_rename: true
 
-output:
-  build_dir: ./build
-  framework_gds: ./build/framework.gds
-  final_gds: ./build/mpw_final.gds
+def available_processes() -> list[str]:
+    root = template_root()
+    if not root.exists():
+        return []
+    return sorted(path.name for path in root.iterdir() if path.is_dir())
 
-designs:
-  - name: block_a
-    gds: ./input/block_a.gds
-    topcell: BLOCK_A
-    size_um: [500, 500]
-    coord: [0, 0]
-    anchor: bottom_left
-    replace_with_placeholder: false
 
-  - name: block_b
-    gds: ./input/block_b.gds
-    topcell: BLOCK_B
-    size_um: [500, 500]
-    coord: [600, 0]
-    anchor: bottom_left
-    replace_with_placeholder: true
-"""
+def init_process(process: str, destination: Path) -> Path:
+    source = template_root() / process
+    if not source.is_dir():
+        choices = ", ".join(available_processes()) or "<none>"
+        raise ValueError(f"Unknown process {process!r}. Available processes: {choices}")
+
+    source_config = source / "mpw_config.yaml"
+    source_deck = source / "deck"
+    if not source_config.is_file():
+        raise FileNotFoundError(f"Template config not found: {source_config}")
+    if not source_deck.is_dir():
+        raise FileNotFoundError(f"Template deck directory not found: {source_deck}")
+
+    target_config = destination / "mpw_config.yaml"
+    target_deck = destination / "deck"
+    _ensure_absent(target_config)
+    _ensure_absent(target_deck)
+
+    destination.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(source_config, target_config)
+    shutil.copytree(source_deck, target_deck)
+    for dirname in ("input", "output", "work"):
+        (destination / dirname).mkdir(exist_ok=True)
+    return target_config
+
+
+def _ensure_absent(path: Path) -> None:
+    if path.exists():
+        raise FileExistsError(f"Refusing to overwrite existing path: {path}")
