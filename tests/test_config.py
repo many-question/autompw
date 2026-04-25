@@ -33,6 +33,7 @@ designs:
     size_um: [100, 200]
     coord: [0, 0]
     anchor: bottom_left
+    bottom_left: [5, 7]
 """,
         encoding="utf-8",
     )
@@ -42,4 +43,5 @@ designs:
     assert loaded.layers.dummy_blocker[0].layer == (150, 0)
     assert loaded.layers.dummy_blocker[1].grow_um == 3
     assert loaded.calibre.flows["metal"].output_suffix == "_DM"
+    assert loaded.designs[0].bottom_left == (5.0, 7.0)
     assert loaded.designs[0].replace_with_placeholder is False

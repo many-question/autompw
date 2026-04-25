@@ -358,6 +358,7 @@ designs:
     size_um: [1000, 1000]
     coord: [0, 0]
     anchor: bottom_left
+    bottom_left: [0, 0]
     replace_with_placeholder: false
 ```
 
@@ -379,6 +380,8 @@ top_right
 
 - `false`：最终拼合时使用原始子设计 GDS
 - `true`：最终拼合时使用该子设计对应的 placeholder GDS
+
+`bottom_left` 是该子设计 GDS 内实际芯片区域的左下角坐标，单位为 um，默认 `[0, 0]`。assemble 时程序会把这个点对齐到 framework 为该子设计预留的 bbox 左下角。这样即使原始 GDS 的实际芯片不在本地原点，也可以正确落到 MPW 预留位置。
 
 ## Calibre deck 渲染机制
 
@@ -442,4 +445,3 @@ git status --short
 ```
 
 `.gitignore` 已忽略常见生成文件，包括 `build/`、`output/`、`work/`、Python cache、Calibre log/report、本地 `input/` 目录。
-

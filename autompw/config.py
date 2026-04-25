@@ -80,6 +80,7 @@ class DesignConfig:
     size_um: tuple[float, float]
     coord: tuple[float, float]
     anchor: Anchor
+    bottom_left: tuple[float, float] = (0.0, 0.0)
     topcell: str | None = None
     replace_with_placeholder: bool = False
 
@@ -224,5 +225,6 @@ def _parse_design(data: dict[str, Any]) -> DesignConfig:
         size_um=_pair_float(data["size_um"], "design.size_um"),
         coord=_pair_float(data["coord"], "design.coord"),
         anchor=Anchor(data.get("anchor", "bottom_left")),
+        bottom_left=_pair_float(data.get("bottom_left", [0, 0]), "design.bottom_left"),
         replace_with_placeholder=bool(data.get("replace_with_placeholder", False)),
     )

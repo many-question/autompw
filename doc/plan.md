@@ -140,6 +140,7 @@ designs:
     size_um: [1000, 1000]
     coord: [0, 0]
     anchor: bottom_left
+    bottom_left: [0, 0]
     replace_with_placeholder: false
 ```
 
@@ -228,7 +229,7 @@ blank placeholder GDS 只包含 marker 层：
 4. 遍历每个子设计：
    - `replace_with_placeholder: false` 时使用原始子设计 GDS。
    - `replace_with_placeholder: true` 时使用对应 placeholder GDS。
-5. 按配置坐标放置。
+5. 按配置坐标放置。真实子设计 GDS 使用 `designs[].bottom_left` 修正源 GDS 内实际芯片左下角偏移，使该点和 framework 预留 bbox 左下角对齐；placeholder GDS 使用本地 `[0, 0]` 对齐。
 6. 输出最终 GDS 和 placement manifest。
 
 ## CLI 命令

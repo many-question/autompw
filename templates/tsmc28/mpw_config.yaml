@@ -75,6 +75,7 @@ designs:
     size_um: [1000, 1000]
     coord: [0, 0]
     anchor: bottom_left
+    bottom_left: [0, 0]
     replace_with_placeholder: false
 
   - name: design2
@@ -83,4 +84,5 @@ designs:
     size_um: [1000, 1000]
     coord: [1100, 0]
     anchor: bottom_left
+    bottom_left: [0, 0]
     replace_with_placeholder: true

@@ -92,6 +92,44 @@ designs:
     assert top.begin_shapes_rec(blank_layout.layer(5, 0)).at_end()
 
 
+def test_assemble_aligns_design_bottom_left_to_reserved_bbox(tmp_path: Path):
+    input_gds = tmp_path / "offset_block.gds"
+    _write_mock_block(input_gds, box=kdb.Box(5000, 7000, 15000, 17000))
+    config = tmp_path / "config.yaml"
+    config.write_text(
+        f"""
+mpw:
+  name: MPW_TEST
+  size_um: [100, 100]
+layers:
+  marker: [0, 0]
+gds:
+  topcell: MPW_TEST
+  dbu_um: 0.001
+output:
+  framework_gds: ./build/framework.gds
+  final_gds: ./build/final.gds
+designs:
+  - name: block
+    gds: {input_gds.as_posix()}
+    topcell: BLOCK
+    size_um: [10, 10]
+    coord: [20, 30]
+    anchor: bottom_left
+    bottom_left: [5, 7]
+""",
+        encoding="utf-8",
+    )
+    project = load_config(config)
+
+    final = assemble(project)
+
+    final_layout = read_layout(final)
+    top = get_top_cell(final_layout, "MPW_TEST")
+    region = kdb.Region(top.begin_shapes_rec(final_layout.layer(31, 0)))
+    assert region.bbox() == kdb.Box(20000, 30000, 30000, 40000)
+
+
 def test_framework_clips_expanded_layers_to_mpw_bbox(tmp_path: Path):
     config = tmp_path / "config.yaml"
     config.write_text(
@@ -134,10 +172,10 @@ designs:
     assert edge_region.bbox().bottom == 0
 
 
-def _write_mock_block(path: Path) -> None:
+def _write_mock_block(path: Path, box: kdb.Box | None = None) -> None:
     layout = kdb.Layout()
     layout.dbu = 0.001
     top = layout.create_cell("BLOCK")
     layer = layout.layer(31, 0)
-    top.shapes(layer).insert(kdb.Box(0, 0, 10000, 10000))
+    top.shapes(layer).insert(box or kdb.Box(0, 0, 10000, 10000))
     layout.write(str(path))

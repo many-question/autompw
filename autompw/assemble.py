@@ -26,15 +26,26 @@ def assemble(config: ProjectConfig, output_path: Path | None = None, strict_dumm
             _add_gds_reference(layout, top, task.output_gds, None, 0.0, 0.0, f"DUMMYFILL_{task.flow_name}", config)
 
     for design in config.designs:
-        source, topcell = _design_source(config, design, strict_dummy)
+        source, topcell, source_bottom_left = _design_source(config, design, strict_dummy)
         bbox = design.bbox
-        _add_gds_reference(layout, top, source, topcell, bbox.xmin, bbox.ymin, f"DESIGN_{design.name}", config)
+        _add_gds_reference(
+            layout,
+            top,
+            source,
+            topcell,
+            bbox.xmin,
+            bbox.ymin,
+            f"DESIGN_{design.name}",
+            config,
+            source_bottom_left,
+        )
         manifest["placements"].append(
             {
                 "name": design.name,
                 "source": str(source),
                 "topcell": topcell,
                 "placed_bbox_um": bbox.as_list(),
+                "source_bottom_left_um": list(source_bottom_left),
                 "replaced_with_placeholder": design.replace_with_placeholder,
             }
         )
@@ -47,17 +58,17 @@ def assemble(config: ProjectConfig, output_path: Path | None = None, strict_dumm
     return out
 
 
-def _design_source(config: ProjectConfig, design: DesignConfig, strict_dummy: bool) -> tuple[Path, str | None]:
+def _design_source(config: ProjectConfig, design: DesignConfig, strict_dummy: bool) -> tuple[Path, str | None, tuple[float, float]]:
     if not design.replace_with_placeholder:
-        return config.resolve(design.gds), design.topcell
+        return config.resolve(design.gds), design.topcell, design.bottom_left
 
     placeholder_outputs = [task.output_gds for task in build_placeholder_tasks(config, design)]
     existing = [path for path in placeholder_outputs if path.exists()]
     if existing:
-        return existing[0], None
+        return existing[0], None, (0.0, 0.0)
     if strict_dummy:
         raise FileNotFoundError(f"No placeholder GDS found for {design.name}: {placeholder_outputs}")
-    return config.resolve(design.gds), design.topcell
+    return config.resolve(design.gds), design.topcell, design.bottom_left
 
 
 def _add_gds_reference(
@@ -69,6 +80,7 @@ def _add_gds_reference(
     target_ymin_um: float,
     cell_name: str,
     config: ProjectConfig,
+    source_bottom_left_um: tuple[float, float] | None = None,
 ) -> None:
     source_layout = read_layout(source_path)
     if abs(source_layout.dbu - target_layout.dbu) > 1e-12:
@@ -77,8 +89,14 @@ def _add_gds_reference(
     dest = target_layout.create_cell(_unique_cell_name(target_layout, cell_name))
     dest.copy_tree(source_top)
     bbox = dest.bbox()
-    dx = dbu_to_iu(target_xmin_um, target_layout.dbu) - bbox.left
-    dy = dbu_to_iu(target_ymin_um, target_layout.dbu) - bbox.bottom
+    if source_bottom_left_um is None:
+        source_left = bbox.left
+        source_bottom = bbox.bottom
+    else:
+        source_left = dbu_to_iu(source_bottom_left_um[0], target_layout.dbu)
+        source_bottom = dbu_to_iu(source_bottom_left_um[1], target_layout.dbu)
+    dx = dbu_to_iu(target_xmin_um, target_layout.dbu) - source_left
+    dy = dbu_to_iu(target_ymin_um, target_layout.dbu) - source_bottom
     target_top.insert(kdb.CellInstArray(dest.cell_index(), kdb.Trans(dx, dy)))
 
 
