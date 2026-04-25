@@ -1,0 +1,61 @@
+mpw:
+  name: MPW_2512
+  size_um: [3333, 2222]
+  origin: [0, 0]
+  dicing_margin_um: 50
+
+spacing:
+  design_to_design_um: 50
+
+calibre:
+  executable: calibre
+  shell: csh
+  setup_script: /home/cshrc/.cshrc.mentor22crack
+  args: "-drc -hier -turbo 32 -turbo_all -hyper connect"
+  work_dir: ./build/calibre
+  flows:
+    metal:
+      enabled: true
+      deck_template: ../dummy_script_metal
+      output_suffix: _DM
+      summary_name: DM.sum
+    odpo:
+      enabled: true
+      deck_template: ../dummy_script_ODPO
+      output_suffix: _DODPO
+      summary_name: DODPO.sum
+
+layers:
+  marker: [0, 0]
+  dummy_blocker:
+    layers:
+      - layer: [150, 0]
+        grow_um: 1
+      - layer: [150, 1]
+        grow_um: 3
+  edge_fill:
+    layers:
+      - [5, 0]
+      - [162, 2]
+    ring_width_um: 0.45
+
+gds:
+  topcell: MPW_2512
+  dbu_um: 0.001
+  flatten_final: false
+  preserve_child_cells: true
+  allow_cell_rename: true
+
+output:
+  build_dir: ./build
+  framework_gds: ./build/framework.gds
+  final_gds: ./build/mpw_final.gds
+
+designs:
+  - name: example_block
+    gds: ./input/example_block.gds
+    topcell: EXAMPLE_BLOCK
+    size_um: [500, 500]
+    coord: [0, 0]
+    anchor: bottom_left
+    replace_with_dummy: false

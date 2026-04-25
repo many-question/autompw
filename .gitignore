@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Virtual environments and packaging
+.venv/
+venv/
+env/
+build/
+dist/
+*.egg-info/
+
+# Test/cache artifacts from restricted Windows sandbox runs
+pytest-cache-files-*/
+
+# AutoMPW generated outputs
+examples/build/
+build/
+*.log
+*.sum
+*.rdb
+*.db
+
+# Calibre / EDA generated artifacts
+*.svrf.rendered
+*.results
+*.rep
+*.err
+*.out
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Large local input/output data should be added intentionally with git add -f
+input/
+output/
