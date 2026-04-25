@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 import shlex
 import subprocess
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -79,13 +80,34 @@ def run_calibre(config: ProjectConfig, task: CalibreTask, dry_run: bool = False)
         shell_command = [config.calibre.shell, shell_flag, command]
     else:
         shell_command = ["/bin/sh", "-lc", command]
-    result = subprocess.run(shell_command, text=True, capture_output=True, check=False)
-    task.log_path.write_text(result.stdout + result.stderr, encoding="utf-8")
+    result = _run_streaming(shell_command, task.log_path)
     if result.returncode != 0:
         raise RuntimeError(f"Calibre task {task.name} failed with code {result.returncode}. See {task.log_path}")
     if not task.output_gds.exists():
         raise FileNotFoundError(f"Calibre task {task.name} did not create {task.output_gds}")
     return result
+
+
+def _run_streaming(command: list[str], log_path: Path) -> subprocess.CompletedProcess[str]:
+    output_parts: list[str] = []
+    with log_path.open("w", encoding="utf-8", errors="replace") as log:
+        process = subprocess.Popen(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1,
+            universal_newlines=True,
+        )
+        assert process.stdout is not None
+        for line in process.stdout:
+            output_parts.append(line)
+            log.write(line)
+            log.flush()
+            sys.stdout.write(line)
+            sys.stdout.flush()
+        returncode = process.wait()
+    return subprocess.CompletedProcess(command, returncode, "".join(output_parts), "")
 
 
 def _replace_svrf_header(text: str, values: dict[str, str]) -> str:
