@@ -70,8 +70,12 @@ def run_calibre(config: ProjectConfig, task: CalibreTask, dry_run: bool = False)
     command = f"{config.calibre.executable} {config.calibre.args} {shlex.quote(str(task.rendered_deck))}"
     if config.calibre.setup_script:
         command = f"source {shlex.quote(config.calibre.setup_script)}; {command}"
+    _echo(f"[autompw] Calibre task: {task.name}")
+    _echo(f"[autompw] Deck: {task.rendered_deck}")
+    _echo(f"[autompw] Log: {task.log_path}")
     if dry_run:
         task.log_path.write_text(command + "\n", encoding="utf-8")
+        _echo(f"[autompw] Dry run command written to {task.log_path}")
         return None
 
     if config.calibre.shell:
@@ -85,7 +89,13 @@ def run_calibre(config: ProjectConfig, task: CalibreTask, dry_run: bool = False)
         raise RuntimeError(f"Calibre task {task.name} failed with code {result.returncode}. See {task.log_path}")
     if not task.output_gds.exists():
         raise FileNotFoundError(f"Calibre task {task.name} did not create {task.output_gds}")
+    _echo(f"[autompw] Calibre task completed: {task.name}")
     return result
+
+
+def _echo(message: str) -> None:
+    sys.stdout.write(message + "\n")
+    sys.stdout.flush()
 
 
 def _run_streaming(command: list[str], log_path: Path) -> subprocess.CompletedProcess[str]:
