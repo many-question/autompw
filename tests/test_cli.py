@@ -40,3 +40,37 @@ def test_init_refuses_to_overwrite(tmp_path: Path):
 
         assert result.exit_code == 1
         assert path.read_text(encoding="utf-8") == "existing\n"
+
+
+def test_check_outputs_each_category_as_it_runs(tmp_path: Path):
+    config = tmp_path / "config.yaml"
+    config.write_text(
+        """
+mpw:
+  name: MPW_TEST
+  size_um: [100, 100]
+layers:
+  marker: [0, 0]
+output:
+  framework_gds: ./build/framework.gds
+  final_gds: ./build/final.gds
+designs:
+  - name: missing
+    gds: ./missing.gds
+    size_um: [10, 10]
+    coord: [0, 0]
+    anchor: bottom_left
+    replace_with_placeholder: true
+""",
+        encoding="utf-8",
+    )
+
+    result = CliRunner().invoke(app, ["check", str(config), "--no-probe-calibre"])
+
+    assert result.exit_code == 0
+    assert "[geometry] - CHECKING..." in result.output
+    assert "[geometry] - OK:" in result.output
+    assert "[design_gds] - CHECKING..." in result.output
+    assert "[design_gds] - WARNING:" in result.output
+    assert "[calibre_command] - CHECKING..." in result.output
+    assert "[calibre_command] - WARNING:" in result.output

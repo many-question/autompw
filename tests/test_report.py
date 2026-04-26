@@ -217,7 +217,8 @@ designs:
     assert [item.name for item in items] == ["geometry", "design_gds", "calibre_decks", "calibre_command"]
     assert items[0].severity == "ok"
     assert items[1].severity == "warning"
-    assert items[3].message == "Calibre command probe skipped"
+    assert items[3].severity == "warning"
+    assert items[3].issues[0].message == "Calibre command probe skipped"
 
 
 def _write_box_gds(path: Path, topcell: str, box: kdb.Box) -> None:

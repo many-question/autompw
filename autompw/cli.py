@@ -11,7 +11,7 @@ from .config import load_config
 from .dummy import run_mpw_dummy_fill, run_placeholders
 from .framework import generate_framework
 from .gds_io import inspect_gds
-from .report import CheckItem, check_project_items
+from .report import CheckItem, check_project_steps, run_check_step
 from .templates import init_process
 
 app = typer.Typer(no_args_is_help=True)
@@ -35,11 +35,10 @@ def check(
     probe_calibre: bool = True,
 ) -> None:
     project = load_config(config)
-    items = check_project_items(project, probe_calibre=probe_calibre)
+    items = _run_check_steps(project, probe_calibre=probe_calibre)
     if report:
         report.parent.mkdir(parents=True, exist_ok=True)
         report.write_text(json.dumps([_check_item_dict(item) for item in items], indent=2), encoding="utf-8")
-    _echo_check_items(items)
     if any(item.severity == "error" for item in items):
         raise typer.Exit(1)
 
@@ -77,8 +76,7 @@ def assemble(config: Path = typer.Argument(DEFAULT_CONFIG), strict_dummy: bool =
 @app.command("all")
 def run_all(config: Path = typer.Argument(DEFAULT_CONFIG), dry_run_calibre: bool = False) -> None:
     project = load_config(config)
-    items = check_project_items(project, probe_calibre=not dry_run_calibre)
-    _echo_check_items(items)
+    items = _run_check_steps(project, probe_calibre=not dry_run_calibre)
     if any(item.severity == "error" for item in items):
         raise typer.Exit(1)
     generate_framework(project)
@@ -93,11 +91,20 @@ def inspect(path: Path) -> None:
     typer.echo(json.dumps(inspect_gds(path), indent=2))
 
 
-def _echo_check_items(items: list[CheckItem]) -> None:
-    for item in items:
-        typer.echo(f"[{item.name}] - {item.severity.upper()}: {item.message}")
-        for issue in item.issues:
-            typer.echo(f"  - {issue.severity.upper()}: {issue.message}")
+def _run_check_steps(project, probe_calibre: bool) -> list[CheckItem]:
+    items = []
+    for step in check_project_steps(project, probe_calibre=probe_calibre):
+        typer.echo(f"[{step.name}] - CHECKING...")
+        item = run_check_step(step)
+        _echo_check_item(item)
+        items.append(item)
+    return items
+
+
+def _echo_check_item(item: CheckItem) -> None:
+    typer.echo(f"[{item.name}] - {item.severity.upper()}: {item.message}")
+    for issue in item.issues:
+        typer.echo(f"  - {issue.severity.upper()}: {issue.message}")
 
 
 def _check_item_dict(item: CheckItem) -> dict[str, object]:

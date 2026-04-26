@@ -4,6 +4,7 @@ import shlex
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Callable
 
 from .config import ProjectConfig
 from .gds_io import bbox_from_box, get_top_cell, read_layout
@@ -23,21 +24,44 @@ class CheckItem:
     issues: tuple[CheckIssue, ...] = ()
 
 
+@dataclass(frozen=True)
+class CheckStep:
+    name: str
+    ok_message: str
+    run: Callable[[], list[CheckIssue]]
+
+
 def check_project(config: ProjectConfig, probe_calibre: bool = True) -> list[CheckIssue]:
     return [issue for item in check_project_items(config, probe_calibre=probe_calibre) for issue in item.issues]
 
 
 def check_project_items(config: ProjectConfig, probe_calibre: bool = True) -> list[CheckItem]:
-    items = [
-        _item("geometry", check_geometry(config), "placement geometry is valid"),
-        _item("design_gds", check_design_gds(config), "design GDS files are readable and match configured metadata"),
-        _item("calibre_decks", check_calibre_decks(config), "Calibre deck templates are present and recognizable"),
+    return [run_check_step(step) for step in check_project_steps(config, probe_calibre=probe_calibre)]
+
+
+def check_project_steps(config: ProjectConfig, probe_calibre: bool = True) -> list[CheckStep]:
+    steps = [
+        CheckStep("geometry", "placement geometry is valid", lambda: check_geometry(config)),
+        CheckStep(
+            "design_gds",
+            "design GDS files are readable and match configured metadata",
+            lambda: check_design_gds(config),
+        ),
+        CheckStep(
+            "calibre_decks",
+            "Calibre deck templates are present and recognizable",
+            lambda: check_calibre_decks(config),
+        ),
     ]
     if probe_calibre:
-        items.append(_item("calibre_command", check_calibre_command(config), "Calibre command starts successfully"))
+        steps.append(CheckStep("calibre_command", "Calibre command starts successfully", lambda: check_calibre_command(config)))
     else:
-        items.append(CheckItem("calibre_command", "warning", "Calibre command probe skipped"))
-    return items
+        steps.append(CheckStep("calibre_command", "Calibre command probe skipped", lambda: [CheckIssue("warning", "Calibre command probe skipped")]))
+    return steps
+
+
+def run_check_step(step: CheckStep) -> CheckItem:
+    return _item(step.name, step.run(), step.ok_message)
 
 
 def _item(name: str, issues: list[CheckIssue], ok_message: str) -> CheckItem:

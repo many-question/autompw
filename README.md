@@ -170,10 +170,14 @@ autompw check --no-probe-calibre
 `check` 会按检查项打印结果，例如：
 
 ```text
+[geometry] - CHECKING...
 [geometry] - OK: placement geometry is valid
+[design_gds] - CHECKING...
 [design_gds] - WARNING: 1 issue(s)
   - WARNING: design1 GDS does not exist: input/design1.gds
+[calibre_decks] - CHECKING...
 [calibre_decks] - OK: Calibre deck templates are present and recognizable
+[calibre_command] - CHECKING...
 [calibre_command] - OK: Calibre command starts successfully
 ```
 
