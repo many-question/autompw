@@ -167,7 +167,17 @@ autompw check some_config.yaml
 autompw check --no-probe-calibre
 ```
 
-`check` 会打印 error 和 warning；只有 error 会导致命令返回失败。
+`check` 会按检查项打印结果，例如：
+
+```text
+[geometry] - OK: placement geometry is valid
+[design_gds] - WARNING: 1 issue(s)
+  - WARNING: design1 GDS does not exist: input/design1.gds
+[calibre_decks] - OK: Calibre deck templates are present and recognizable
+[calibre_command] - OK: Calibre command starts successfully
+```
+
+只有 `ERROR` 会导致命令返回失败，`WARNING` 只提示风险。
 
 ### `framework`
 

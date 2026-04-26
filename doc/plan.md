@@ -158,6 +158,7 @@ designs:
 8. 默认试运行 `calibre -version`，确认 Calibre shell、setup script 和 executable 可以启动；可通过 `--no-probe-calibre` 跳过。
 
 只检查 design-to-design spacing，不检查子设计到 MPW 边界的划片距离。子设计允许紧贴 MPW 边界，但不能越界。
+`check` 输出按检查项分组，例如 `[geometry] - OK`、`[design_gds] - WARNING`、`[calibre_decks] - ERROR`。只有 error 会导致命令失败，warning 只提示风险。
 
 支持的 anchor：
 

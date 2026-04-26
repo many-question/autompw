@@ -15,14 +15,40 @@ class CheckIssue:
     message: str
 
 
+@dataclass(frozen=True)
+class CheckItem:
+    name: str
+    severity: str
+    message: str
+    issues: tuple[CheckIssue, ...] = ()
+
+
 def check_project(config: ProjectConfig, probe_calibre: bool = True) -> list[CheckIssue]:
-    issues: list[CheckIssue] = []
-    issues.extend(check_geometry(config))
-    issues.extend(check_design_gds(config))
-    issues.extend(check_calibre_decks(config))
+    return [issue for item in check_project_items(config, probe_calibre=probe_calibre) for issue in item.issues]
+
+
+def check_project_items(config: ProjectConfig, probe_calibre: bool = True) -> list[CheckItem]:
+    items = [
+        _item("geometry", check_geometry(config), "placement geometry is valid"),
+        _item("design_gds", check_design_gds(config), "design GDS files are readable and match configured metadata"),
+        _item("calibre_decks", check_calibre_decks(config), "Calibre deck templates are present and recognizable"),
+    ]
     if probe_calibre:
-        issues.extend(check_calibre_command(config))
-    return issues
+        items.append(_item("calibre_command", check_calibre_command(config), "Calibre command starts successfully"))
+    else:
+        items.append(CheckItem("calibre_command", "warning", "Calibre command probe skipped"))
+    return items
+
+
+def _item(name: str, issues: list[CheckIssue], ok_message: str) -> CheckItem:
+    if any(issue.severity == "error" for issue in issues):
+        severity = "error"
+    elif any(issue.severity == "warning" for issue in issues):
+        severity = "warning"
+    else:
+        severity = "ok"
+    message = ok_message if severity == "ok" else f"{len(issues)} issue(s)"
+    return CheckItem(name, severity, message, tuple(issues))
 
 
 def check_geometry(config: ProjectConfig) -> list[CheckIssue]:

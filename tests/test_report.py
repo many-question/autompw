@@ -3,7 +3,7 @@ from pathlib import Path
 from autompw.config import load_config
 import klayout.db as kdb
 
-from autompw.report import check_calibre_decks, check_design_gds, check_geometry
+from autompw.report import check_calibre_decks, check_design_gds, check_geometry, check_project_items
 
 
 def test_boundary_allows_touching_mpw_edge(tmp_path: Path):
@@ -187,6 +187,37 @@ designs:
     issues = check_calibre_decks(load_config(config))
     assert issues[0].severity == "warning"
     assert "automatic rendering" in issues[0].message
+
+
+def test_check_project_items_reports_each_category(tmp_path: Path):
+    config = tmp_path / "config.yaml"
+    config.write_text(
+        """
+mpw:
+  name: MPW_TEST
+  size_um: [100, 100]
+layers:
+  marker: [0, 0]
+output:
+  framework_gds: ./build/framework.gds
+  final_gds: ./build/final.gds
+designs:
+  - name: missing
+    gds: ./missing.gds
+    topcell: MISSING
+    size_um: [10, 10]
+    coord: [0, 0]
+    anchor: bottom_left
+    replace_with_placeholder: true
+""",
+        encoding="utf-8",
+    )
+
+    items = check_project_items(load_config(config), probe_calibre=False)
+    assert [item.name for item in items] == ["geometry", "design_gds", "calibre_decks", "calibre_command"]
+    assert items[0].severity == "ok"
+    assert items[1].severity == "warning"
+    assert items[3].message == "Calibre command probe skipped"
 
 
 def _write_box_gds(path: Path, topcell: str, box: kdb.Box) -> None:
