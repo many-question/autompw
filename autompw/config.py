@@ -53,7 +53,7 @@ class CalibreConfig:
     shell: str | None = None
     setup_script: str | None = None
     args: str = "-drc -hier -turbo 32 -turbo_all -hyper connect"
-    work_dir: Path = Path("build/calibre")
+    work_dir: Path = Path("work")
     flows: dict[str, CalibreFlowConfig] = field(default_factory=dict)
 
 
@@ -68,9 +68,9 @@ class GDSConfig:
 
 @dataclass(frozen=True)
 class OutputConfig:
+    output_dir: Path
     framework_gds: Path
     final_gds: Path
-    build_dir: Path = Path("build")
 
 
 @dataclass(frozen=True)
@@ -194,17 +194,25 @@ def _parse_calibre(data: dict[str, Any]) -> CalibreConfig:
         shell=data.get("shell"),
         setup_script=data.get("setup_script"),
         args=str(data.get("args", "-drc -hier -turbo 32 -turbo_all -hyper connect")),
-        work_dir=Path(data.get("work_dir", "build/calibre")),
+        work_dir=Path(data.get("work_dir", "work")),
         flows=flows,
     )
 
 
 def _parse_output(data: dict[str, Any]) -> OutputConfig:
+    output_dir = Path(data.get("output_dir", data.get("build_dir", "output")))
     return OutputConfig(
-        framework_gds=Path(data.get("framework_gds", "build/framework.gds")),
-        final_gds=Path(data.get("final_gds", "build/mpw_final.gds")),
-        build_dir=Path(data.get("build_dir", "build")),
+        output_dir=output_dir,
+        framework_gds=_output_path(output_dir, data.get("framework_gds", "framework.gds")),
+        final_gds=_output_path(output_dir, data.get("final_gds", "mpw.gds")),
     )
+
+
+def _output_path(output_dir: Path, value: str | Path) -> Path:
+    path = Path(value)
+    if path.is_absolute() or path.parent != Path("."):
+        return path
+    return output_dir / path
 
 
 def _parse_gds(data: dict[str, Any]) -> GDSConfig:

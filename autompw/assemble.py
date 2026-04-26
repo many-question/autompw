@@ -7,7 +7,8 @@ from pathlib import Path
 import klayout.db as kdb
 
 from .config import DesignConfig, ProjectConfig
-from .dummy import build_mpw_dummy_tasks, build_placeholder_tasks
+from .dummy import build_mpw_dummy_tasks
+from .framework import placeholder_final_path
 from .gds_io import dbu_to_iu, get_top_cell, make_layout, read_layout, write_layout
 
 
@@ -62,12 +63,11 @@ def _design_source(config: ProjectConfig, design: DesignConfig, strict_dummy: bo
     if not design.replace_with_placeholder:
         return config.resolve(design.gds), design.topcell, design.bottom_left
 
-    placeholder_outputs = [task.output_gds for task in build_placeholder_tasks(config, design)]
-    existing = [path for path in placeholder_outputs if path.exists()]
-    if existing:
-        return existing[0], None, (0.0, 0.0)
+    placeholder = placeholder_final_path(config, design)
+    if placeholder.exists():
+        return placeholder, None, (0.0, 0.0)
     if strict_dummy:
-        raise FileNotFoundError(f"No placeholder GDS found for {design.name}: {placeholder_outputs}")
+        raise FileNotFoundError(f"No placeholder GDS found for {design.name}: {placeholder}")
     return config.resolve(design.gds), design.topcell, design.bottom_left
 
 

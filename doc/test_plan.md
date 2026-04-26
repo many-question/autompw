@@ -54,7 +54,7 @@ pytest -q
 预期结果：
 
 ```text
-14 passed
+16 passed
 ```
 
 ## 4. 检查参考 GDS
@@ -117,14 +117,14 @@ autompw dummy-fill --dry-run
 
 ```bash
 grep -E 'LAYOUT PATH|LAYOUT PRIMARY|RESULTS DATABASE|SUMMARY REPORT|VARIABLE xLB|VARIABLE yLB|VARIABLE xRT|VARIABLE yRT' \
-  work/mpw/metal/MPW_metal.svrf
+  work/dummy/metal/MPW_metal.svrf
 ```
 
 检查 ODPO deck：
 
 ```bash
 grep -E 'LAYOUT PATH|LAYOUT PRIMARY|DFM DEFAULTS RDB GDS FILE|SUMMARY REPORT|VARIABLE xLB|VARIABLE yLB|VARIABLE xRT|VARIABLE yRT' \
-  work/mpw/odpo/MPW_odpo.svrf
+  work/dummy/odpo/MPW_odpo.svrf
 ```
 
 ## 8. placeholder dry-run
@@ -139,6 +139,7 @@ autompw placeholders --dry-run
 - blank placeholder GDS 只包含 marker 层
 - 按每个 block 的尺寸渲染独立 deck
 - 为每个 enabled flow 生成独立日志和 rendered deck
+- 真实运行时合并生成 `output/placeholders/<design_name>_placeholder.gds`
 
 ## 9. 真实运行 Calibre
 
@@ -179,6 +180,10 @@ autompw assemble
 ```text
 output/mpw.gds
 output/mpw.manifest.json
+output/framework.gds
+output/dummy/dummy_metal.gds
+output/dummy/dummy_odpo.gds
+output/placeholders/<design_name>_placeholder.gds
 ```
 
 检查最终 GDS：

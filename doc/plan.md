@@ -129,9 +129,9 @@ gds:
   allow_cell_rename: true
 
 output:
-  build_dir: ./output
-  framework_gds: ./output/framework.gds
-  final_gds: ./output/mpw.gds
+  output_dir: ./output
+  framework_gds: framework.gds
+  final_gds: mpw.gds
 
 designs:
   - name: design1
@@ -201,9 +201,23 @@ YAML 中只配置：
 - summary report
 - chip window 坐标
 
-渲染时程序读取 `deck_template`，只替换运行期字段，并把 rendered deck 写到 work 目录。原始 deck 模板不会被原地修改，其他 foundry rule、density、layer map、fill 参数保留给用户手工维护。
+渲染时程序读取 `deck_template`，只替换运行期字段，并把 rendered deck、log 和中间 GDS 写到 work 目录。原始 deck 模板不会被原地修改，其他 foundry rule、density、layer map、fill 参数保留给用户手工维护。
 
 MPW dummy fill 的 chip window 自动使用 MPW 尺寸。placeholder fill 的 chip window 自动使用对应子设计尺寸。
+
+最终输出目录固定为 `output.output_dir`：
+
+```text
+output/
+  mpw.gds
+  framework.gds
+  dummy/
+    dummy_metal.gds
+    dummy_odpo.gds
+  placeholders/
+    design1_placeholder.gds
+    design2_placeholder.gds
+```
 
 ## Placeholder Flow
 
@@ -217,7 +231,7 @@ blank placeholder GDS 只包含 marker 层：
 - 不写入 dummy blocker 层
 - 不写入 edge fill 层
 
-随后每个 placeholder、每个 enabled Calibre flow 都会渲染独立 deck，避免不同任务互相覆盖。
+随后每个 placeholder、每个 enabled Calibre flow 都会渲染独立 deck，避免不同任务互相覆盖。真实运行后，AutoMPW 会把 marker blank GDS 和各 flow 生成的 dummy GDS 合并成 `output/placeholders/<design_name>_placeholder.gds`。
 
 ## Assemble
 

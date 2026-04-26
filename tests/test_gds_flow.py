@@ -4,6 +4,7 @@ import klayout.db as kdb
 
 from autompw.assemble import assemble
 from autompw.config import load_config
+from autompw.dummy import merge_placeholder_outputs
 from autompw.framework import generate_blank_placeholder, generate_framework
 from autompw.gds_io import get_top_cell, read_layout
 
@@ -92,6 +93,43 @@ designs:
     assert top.begin_shapes_rec(blank_layout.layer(5, 0)).at_end()
 
 
+def test_merge_placeholder_outputs_combines_marker_and_dummy(tmp_path: Path):
+    dummy_gds = tmp_path / "dummy_metal.gds"
+    _write_mock_block(dummy_gds, topcell="DUMMY", layer=(32, 0))
+    config = tmp_path / "config.yaml"
+    config.write_text(
+        """
+mpw:
+  name: MPW_TEST
+  size_um: [100, 100]
+layers:
+  marker: [0, 0]
+output:
+  output_dir: ./output
+  framework_gds: framework.gds
+  final_gds: mpw.gds
+designs:
+  - name: block
+    gds: ./block.gds
+    size_um: [10, 10]
+    coord: [0, 0]
+    anchor: bottom_left
+""",
+        encoding="utf-8",
+    )
+    project = load_config(config)
+    design = project.designs[0]
+    marker = tmp_path / "marker.gds"
+    generate_blank_placeholder(project, design, marker)
+
+    merged = merge_placeholder_outputs(project, design, marker, [dummy_gds])
+
+    layout = read_layout(merged)
+    top = get_top_cell(layout, "PLACEHOLDER_block")
+    assert not top.begin_shapes_rec(layout.layer(0, 0)).at_end()
+    assert not top.begin_shapes_rec(layout.layer(32, 0)).at_end()
+
+
 def test_assemble_aligns_design_bottom_left_to_reserved_bbox(tmp_path: Path):
     input_gds = tmp_path / "offset_block.gds"
     _write_mock_block(input_gds, box=kdb.Box(5000, 7000, 15000, 17000))
@@ -172,10 +210,15 @@ designs:
     assert edge_region.bbox().bottom == 0
 
 
-def _write_mock_block(path: Path, box: kdb.Box | None = None) -> None:
+def _write_mock_block(
+    path: Path,
+    box: kdb.Box | None = None,
+    topcell: str = "BLOCK",
+    layer: tuple[int, int] = (31, 0),
+) -> None:
     layout = kdb.Layout()
     layout.dbu = 0.001
-    top = layout.create_cell("BLOCK")
-    layer = layout.layer(31, 0)
-    top.shapes(layer).insert(box or kdb.Box(0, 0, 10000, 10000))
+    top = layout.create_cell(topcell)
+    layer_index = layout.layer(*layer)
+    top.shapes(layer_index).insert(box or kdb.Box(0, 0, 10000, 10000))
     layout.write(str(path))

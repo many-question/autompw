@@ -84,12 +84,20 @@ def _insert_edge_layers(
 
 
 def placeholder_blank_path(config: ProjectConfig, design: DesignConfig) -> Path:
-    return config.resolve(config.output.build_dir) / "placeholders" / f"{design.name}_blank.gds"
+    return config.resolve(config.calibre.work_dir) / "placeholders" / design.name / f"{design.name}_marker.gds"
+
+
+def placeholder_final_path(config: ProjectConfig, design: DesignConfig) -> Path:
+    return config.resolve(config.output.output_dir) / "placeholders" / f"{design.name}_placeholder.gds"
 
 
 def placeholder_output_base(config: ProjectConfig, design: DesignConfig, flow_name: str) -> Path:
     return config.resolve(config.calibre.work_dir) / "placeholders" / design.name / flow_name
 
 
-def mpw_dummy_output_base(config: ProjectConfig, flow_name: str) -> Path:
-    return config.resolve(config.calibre.work_dir) / "mpw" / flow_name
+def mpw_dummy_work_base(config: ProjectConfig, flow_name: str) -> Path:
+    return config.resolve(config.calibre.work_dir) / "dummy" / flow_name
+
+
+def mpw_dummy_output_path(config: ProjectConfig, flow_name: str) -> Path:
+    return config.resolve(config.output.output_dir) / "dummy" / f"dummy_{flow_name}.gds"

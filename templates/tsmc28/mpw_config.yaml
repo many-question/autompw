@@ -64,9 +64,9 @@ gds:
   allow_cell_rename: true
 
 output:
-  build_dir: ./output
-  framework_gds: ./output/framework.gds
-  final_gds: ./output/mpw.gds
+  output_dir: ./output
+  framework_gds: framework.gds
+  final_gds: mpw.gds
 
 designs:
   - name: design1
