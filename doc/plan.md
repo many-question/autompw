@@ -152,6 +152,10 @@ designs:
 2. 检查每个 bbox 是否完全位于 MPW bbox 内。
 3. 检查子设计之间是否重叠。
 4. 检查子设计之间的间距是否不小于 `spacing.design_to_design_um`。
+5. 检查每个子设计 GDS 是否存在、是否可读取、`topcell` 是否存在；如果 `replace_with_placeholder: true`，原始 GDS 缺失或不可读只报 warning。
+6. 检查子设计 GDS bbox 的左下角和尺寸是否与 `bottom_left` / `size_um` 一致；不一致时报 warning。
+7. 检查每个 enabled Calibre flow 的 deck 模板是否存在，并检查模板是否包含自动渲染需要的 header 字段。
+8. 默认试运行 `calibre -version`，确认 Calibre shell、setup script 和 executable 可以启动；可通过 `--no-probe-calibre` 跳过。
 
 只检查 design-to-design spacing，不检查子设计到 MPW 边界的划片距离。子设计允许紧贴 MPW 边界，但不能越界。
 

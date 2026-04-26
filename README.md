@@ -153,8 +153,21 @@ autompw check some_config.yaml
 - 每个子设计 bbox 必须在 MPW bbox 内
 - 子设计之间不能重叠
 - 子设计之间 spacing 必须不小于 `spacing.design_to_design_um`
+- 每个子设计 GDS 文件必须存在，且 `topcell` 可读取
+- 如果 `replace_with_placeholder: true`，原始子设计 GDS 不存在或不可读只报 warning
+- 子设计 GDS 的 bbox 左下角和尺寸会和 `bottom_left` / `size_um` 对比，不一致时报 warning
+- 每个 enabled Calibre flow 的 deck 模板必须存在，并检查是否包含可自动替换的 header 字段
+- 默认会试运行 `calibre -version`，确认 `shell`、`setup_script` 和 Calibre 命令可以启动
 
 不会检查子设计到 MPW 边界的划片距离。子设计可以紧贴 MPW 边界，只要没有超出 MPW bbox。
+
+如果当前机器没有 Calibre，或只想做静态检查，可以跳过 Calibre 启动探测：
+
+```bash
+autompw check --no-probe-calibre
+```
+
+`check` 会打印 error 和 warning；只有 error 会导致命令返回失败。
 
 ### `framework`
 

@@ -29,17 +29,22 @@ def init(process: str = typer.Argument(...)) -> None:
 
 
 @app.command()
-def check(config: Path = typer.Argument(DEFAULT_CONFIG), report: Optional[Path] = None) -> None:
+def check(
+    config: Path = typer.Argument(DEFAULT_CONFIG),
+    report: Optional[Path] = None,
+    probe_calibre: bool = True,
+) -> None:
     project = load_config(config)
-    issues = check_project(project)
+    issues = check_project(project, probe_calibre=probe_calibre)
     if report:
         report.parent.mkdir(parents=True, exist_ok=True)
         report.write_text(json.dumps([issue.__dict__ for issue in issues], indent=2), encoding="utf-8")
     if issues:
         for issue in issues:
             typer.echo(f"{issue.severity.upper()}: {issue.message}")
+    if any(issue.severity == "error" for issue in issues):
         raise typer.Exit(1)
-    typer.echo("OK: placement check passed")
+    typer.echo("OK: check passed")
 
 
 @app.command()
@@ -75,10 +80,11 @@ def assemble(config: Path = typer.Argument(DEFAULT_CONFIG), strict_dummy: bool =
 @app.command("all")
 def run_all(config: Path = typer.Argument(DEFAULT_CONFIG), dry_run_calibre: bool = False) -> None:
     project = load_config(config)
-    issues = check_project(project)
+    issues = check_project(project, probe_calibre=not dry_run_calibre)
     if issues:
         for issue in issues:
             typer.echo(f"{issue.severity.upper()}: {issue.message}")
+    if any(issue.severity == "error" for issue in issues):
         raise typer.Exit(1)
     generate_framework(project)
     run_mpw_dummy_fill(project, dry_run=dry_run_calibre)

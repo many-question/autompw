@@ -80,6 +80,14 @@ autompw check
 
 不指定配置文件时，默认读取当前目录的 `./mpw_config.yaml`。
 
+如果当前 Linux 环境还没有配置 Calibre，可以先跳过 Calibre 启动探测：
+
+```bash
+autompw check --no-probe-calibre
+```
+
+正式环境中建议运行默认 `autompw check`，它会检查子设计 GDS、deck 模板，并试运行 `calibre -version`。
+
 ## 6. 生成 framework GDS
 
 ```bash
