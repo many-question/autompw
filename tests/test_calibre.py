@@ -93,3 +93,44 @@ designs:
     assert task.input_topcell == "PLACEHOLDER_a"
     assert task.width_um == 10
     assert task.height_um == 12
+    assert task.x0_um == 0
+    assert task.y0_um == 0
+
+
+def test_placeholder_task_uses_local_window_even_when_design_coord_is_offset(tmp_path: Path):
+    (tmp_path / "templates").mkdir()
+    (tmp_path / "templates" / "metal.tpl").write_text('LAYOUT PRIMARY "OLD"\n', encoding="utf-8")
+    config = tmp_path / "config.yaml"
+    config.write_text(
+        """
+mpw:
+  name: MPW_TEST
+  size_um: [100, 80]
+layers:
+  marker: [0, 0]
+calibre:
+  work_dir: ./build/calibre
+  flows:
+    metal:
+      deck_template: ./templates/metal.tpl
+      output_suffix: _DM
+      summary_name: DM.sum
+output:
+  framework_gds: ./build/framework.gds
+  final_gds: ./build/final.gds
+designs:
+  - name: a
+    gds: ./a.gds
+    size_um: [10, 12]
+    coord: [25, 30]
+    anchor: bottom_left
+    replace_with_placeholder: true
+""",
+        encoding="utf-8",
+    )
+    project = load_config(config)
+    task = build_placeholder_tasks(project, project.designs[0])[0]
+    assert task.x0_um == 0
+    assert task.y0_um == 0
+    assert task.x1_um == 10
+    assert task.y1_um == 12

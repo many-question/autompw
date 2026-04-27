@@ -168,6 +168,95 @@ designs:
     assert region.bbox() == kdb.Box(20000, 30000, 30000, 40000)
 
 
+def test_assemble_keeps_dummy_fill_absolute_coordinates(tmp_path: Path):
+    input_gds = tmp_path / "block.gds"
+    _write_mock_block(input_gds)
+    config = tmp_path / "config.yaml"
+    config.write_text(
+        f"""
+mpw:
+  name: MPW_TEST
+  size_um: [100, 100]
+layers:
+  marker: [0, 0]
+calibre:
+  flows:
+    metal:
+      deck_template: ./deck.svrf
+      output_suffix: _DM
+      summary_name: DM.sum
+gds:
+  topcell: MPW_TEST
+  dbu_um: 0.001
+output:
+  output_dir: ./output
+  framework_gds: framework.gds
+  final_gds: final.gds
+designs:
+  - name: block
+    gds: {input_gds.as_posix()}
+    topcell: BLOCK
+    size_um: [10, 10]
+    coord: [0, 0]
+    anchor: bottom_left
+""",
+        encoding="utf-8",
+    )
+    project = load_config(config)
+    dummy = tmp_path / "output" / "dummy" / "dummy_metal.gds"
+    dummy.parent.mkdir(parents=True)
+    _write_mock_block(dummy, box=kdb.Box(20000, 30000, 25000, 35000), topcell="DUMMY", layer=(40, 0))
+
+    final = assemble(project)
+
+    final_layout = read_layout(final)
+    top = get_top_cell(final_layout, "MPW_TEST")
+    region = kdb.Region(top.begin_shapes_rec(final_layout.layer(40, 0)))
+    assert region.bbox() == kdb.Box(20000, 30000, 25000, 35000)
+
+
+def test_assemble_places_placeholder_origin_at_reserved_bbox(tmp_path: Path):
+    input_gds = tmp_path / "block.gds"
+    _write_mock_block(input_gds)
+    config = tmp_path / "config.yaml"
+    config.write_text(
+        f"""
+mpw:
+  name: MPW_TEST
+  size_um: [100, 100]
+layers:
+  marker: [0, 0]
+gds:
+  topcell: MPW_TEST
+  dbu_um: 0.001
+output:
+  output_dir: ./output
+  framework_gds: framework.gds
+  final_gds: final.gds
+designs:
+  - name: block
+    gds: {input_gds.as_posix()}
+    topcell: BLOCK
+    size_um: [10, 10]
+    coord: [20, 30]
+    anchor: bottom_left
+    replace_with_placeholder: true
+""",
+        encoding="utf-8",
+    )
+    project = load_config(config)
+    placeholder = tmp_path / "output" / "placeholders" / "block_placeholder.gds"
+    placeholder.parent.mkdir(parents=True)
+    _write_mock_block(placeholder, box=kdb.Box(2000, 3000, 7000, 8000), topcell="PLACEHOLDER_block", layer=(41, 0))
+
+    final = assemble(project)
+
+    final_layout = read_layout(final)
+    top = get_top_cell(final_layout, "MPW_TEST")
+    region = kdb.Region(top.begin_shapes_rec(final_layout.layer(41, 0)))
+    assert region.bbox() == kdb.Box(22000, 33000, 27000, 38000)
+
+
 def test_framework_clips_expanded_layers_to_mpw_bbox(tmp_path: Path):
     config = tmp_path / "config.yaml"
     config.write_text(

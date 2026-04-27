@@ -24,18 +24,28 @@ def assemble(config: ProjectConfig, output_path: Path | None = None, strict_dumm
 
     for task in build_mpw_dummy_tasks(config):
         if task.output_gds.exists():
-            _add_gds_reference(layout, top, task.output_gds, None, 0.0, 0.0, f"DUMMYFILL_{task.flow_name}", config)
+            _add_gds_reference(
+                layout,
+                top,
+                task.output_gds,
+                None,
+                0.0,
+                0.0,
+                f"DUMMYFILL_{task.flow_name}",
+                config,
+                (0.0, 0.0),
+            )
 
     for design in config.designs:
-        source, topcell, source_bottom_left = _design_source(config, design, strict_dummy)
+        source, topcell, source_bottom_left, target_origin = _design_source(config, design, strict_dummy)
         bbox = design.bbox
         _add_gds_reference(
             layout,
             top,
             source,
             topcell,
-            bbox.xmin,
-            bbox.ymin,
+            target_origin[0],
+            target_origin[1],
             f"DESIGN_{design.name}",
             config,
             source_bottom_left,
@@ -59,16 +69,21 @@ def assemble(config: ProjectConfig, output_path: Path | None = None, strict_dumm
     return out
 
 
-def _design_source(config: ProjectConfig, design: DesignConfig, strict_dummy: bool) -> tuple[Path, str | None, tuple[float, float]]:
+def _design_source(
+    config: ProjectConfig,
+    design: DesignConfig,
+    strict_dummy: bool,
+) -> tuple[Path, str | None, tuple[float, float], tuple[float, float]]:
+    bbox = design.bbox
     if not design.replace_with_placeholder:
-        return config.resolve(design.gds), design.topcell, design.bottom_left
+        return config.resolve(design.gds), design.topcell, design.bottom_left, (bbox.xmin, bbox.ymin)
 
     placeholder = placeholder_final_path(config, design)
     if placeholder.exists():
-        return placeholder, None, (0.0, 0.0)
+        return placeholder, None, (0.0, 0.0), (bbox.xmin, bbox.ymin)
     if strict_dummy:
         raise FileNotFoundError(f"No placeholder GDS found for {design.name}: {placeholder}")
-    return config.resolve(design.gds), design.topcell, design.bottom_left
+    return config.resolve(design.gds), design.topcell, design.bottom_left, (bbox.xmin, bbox.ymin)
 
 
 def _add_gds_reference(
