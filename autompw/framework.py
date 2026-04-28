@@ -8,6 +8,8 @@ from .config import DesignConfig, ProjectConfig
 from .gds_io import box_from_bbox, dbu_to_iu, layer_index, make_layout, write_layout
 from .geometry import BBox
 
+FRAMEWORK_LABEL_HEIGHT_UM = 100.0
+
 
 def generate_framework(config: ProjectConfig, output_path: Path | None = None) -> Path:
     out = output_path or config.resolve(config.output.framework_gds)
@@ -56,9 +58,19 @@ def _insert_design_label(
     marker_layer: int,
     bbox: BBox,
 ) -> None:
-    x = dbu_to_iu((bbox.xmin + bbox.xmax) / 2, layout.dbu)
-    y = dbu_to_iu((bbox.ymin + bbox.ymax) / 2, layout.dbu)
-    top.shapes(marker_layer).insert(kdb.Text(design.name, kdb.Trans(x, y)))
+    text_region = _design_label_region(design.name, layout.dbu)
+    text_bbox = text_region.bbox()
+    target_x = dbu_to_iu((bbox.xmin + bbox.xmax) / 2, layout.dbu)
+    target_y = dbu_to_iu((bbox.ymin + bbox.ymax) / 2, layout.dbu)
+    text_center_x = (text_bbox.left + text_bbox.right) // 2
+    text_center_y = (text_bbox.bottom + text_bbox.top) // 2
+    top.shapes(marker_layer).insert(text_region.transformed(kdb.Trans(target_x - text_center_x, target_y - text_center_y)))
+
+
+def _design_label_region(text: str, dbu_um: float) -> kdb.Region:
+    generator = kdb.TextGenerator.default_generator()
+    mag = FRAMEWORK_LABEL_HEIGHT_UM / generator.dheight()
+    return generator.text(text, dbu_um, mag)
 
 
 def _insert_blocker_layers(

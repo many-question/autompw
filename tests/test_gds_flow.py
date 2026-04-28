@@ -5,7 +5,7 @@ import klayout.db as kdb
 from autompw.assemble import assemble
 from autompw.config import load_config
 from autompw.dummy import merge_placeholder_outputs
-from autompw.framework import generate_blank_placeholder, generate_framework
+from autompw.framework import FRAMEWORK_LABEL_HEIGHT_UM, _design_label_region, generate_blank_placeholder, generate_framework
 from autompw.gds_io import get_top_cell, read_layout
 
 
@@ -56,8 +56,8 @@ designs:
     marker_layer = framework_layout.layer(0, 0)
     marker_boxes = [shape.box for shape in framework_top.shapes(marker_layer).each() if shape.is_box()]
     assert kdb.Box(0, 0, 100000, 100000) in marker_boxes
-    marker_texts = [shape.text.string for shape in framework_top.shapes(marker_layer).each() if shape.is_text()]
-    assert "block" in marker_texts
+    marker_shapes = list(framework_top.shapes(marker_layer).each())
+    assert any(shape.is_polygon() for shape in marker_shapes)
     final_layout = read_layout(final)
     top = get_top_cell(final_layout, "MPW_TEST")
     assert top.bbox().width() > 0
@@ -93,6 +93,12 @@ designs:
     assert top.bbox().height() == 8000
     assert top.begin_shapes_rec(blank_layout.layer(150, 0)).at_end()
     assert top.begin_shapes_rec(blank_layout.layer(5, 0)).at_end()
+
+
+def test_framework_label_region_has_100um_design_height():
+    region = _design_label_region("block", 0.001)
+    assert int(round(FRAMEWORK_LABEL_HEIGHT_UM / 0.001)) >= region.bbox().height()
+    assert region.bbox().height() > int(round(80 / 0.001))
 
 
 def test_merge_placeholder_outputs_combines_marker_and_dummy(tmp_path: Path):
