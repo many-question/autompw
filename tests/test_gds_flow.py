@@ -56,6 +56,8 @@ designs:
     marker_layer = framework_layout.layer(0, 0)
     marker_boxes = [shape.box for shape in framework_top.shapes(marker_layer).each() if shape.is_box()]
     assert kdb.Box(0, 0, 100000, 100000) in marker_boxes
+    marker_texts = [shape.text.string for shape in framework_top.shapes(marker_layer).each() if shape.is_text()]
+    assert "block" in marker_texts
     final_layout = read_layout(final)
     top = get_top_cell(final_layout, "MPW_TEST")
     assert top.bbox().width() > 0

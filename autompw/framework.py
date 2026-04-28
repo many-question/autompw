@@ -44,8 +44,21 @@ def _insert_design_markers(
 ) -> None:
     bbox = design.bbox
     top.shapes(marker_layer).insert(box_from_bbox(bbox, layout.dbu))
+    _insert_design_label(layout, top, design, marker_layer, bbox)
     _insert_blocker_layers(layout, top, bbox, config, clip_bbox)
     _insert_edge_layers(layout, top, bbox, config, clip_bbox)
+
+
+def _insert_design_label(
+    layout: kdb.Layout,
+    top: kdb.Cell,
+    design: DesignConfig,
+    marker_layer: int,
+    bbox: BBox,
+) -> None:
+    x = dbu_to_iu((bbox.xmin + bbox.xmax) / 2, layout.dbu)
+    y = dbu_to_iu((bbox.ymin + bbox.ymax) / 2, layout.dbu)
+    top.shapes(marker_layer).insert(kdb.Text(design.name, kdb.Trans(x, y)))
 
 
 def _insert_blocker_layers(
