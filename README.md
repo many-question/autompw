@@ -120,6 +120,7 @@ autompw all --dry-run-calibre
 
 ```bash
 autompw init PROCESS
+autompw version
 autompw check [CONFIG.yaml]
 autompw framework [CONFIG.yaml]
 autompw dummy-fill [CONFIG.yaml] [--dry-run]
@@ -138,6 +139,16 @@ autompw init tsmc28
 ```
 
 当前仓库提供的工艺模板是 `tsmc28`。
+
+### `version`
+
+查看当前实际运行的 AutoMPW 版本和模块路径：
+
+```bash
+autompw version
+```
+
+输出中的 `module` 路径可用于确认当前 PATH 是否指向最新安装环境。
 
 ### `check`
 

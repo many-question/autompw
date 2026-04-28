@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import platform
 import json
 from pathlib import Path
 from typing import Optional
 
 import typer
 
+import autompw
 from .assemble import assemble as assemble_gds
 from .config import load_config
 from .dummy import run_mpw_dummy_fill, run_placeholders
@@ -26,6 +28,13 @@ def init(process: str = typer.Argument(...)) -> None:
         typer.echo(f"ERROR: {exc}")
         raise typer.Exit(1)
     typer.echo(str(config))
+
+
+@app.command()
+def version() -> None:
+    typer.echo(f"autompw {autompw.__version__}")
+    typer.echo(f"python {platform.python_version()}")
+    typer.echo(f"module {Path(autompw.__file__).resolve()}")
 
 
 @app.command()

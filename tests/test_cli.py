@@ -42,6 +42,14 @@ def test_init_refuses_to_overwrite(tmp_path: Path):
         assert path.read_text(encoding="utf-8") == "existing\n"
 
 
+def test_version_outputs_package_location():
+    result = CliRunner().invoke(app, ["version"])
+
+    assert result.exit_code == 0
+    assert "autompw 0.1.1" in result.output
+    assert "module " in result.output
+
+
 def test_check_outputs_each_category_as_it_runs(tmp_path: Path):
     config = tmp_path / "config.yaml"
     config.write_text(
