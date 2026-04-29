@@ -46,7 +46,8 @@ def assemble(
 
     total_designs = len(config.designs)
     for index, design in enumerate(config.designs, start=1):
-        _progress(progress, f"assembling {design.name} ... ({index}/{total_designs})")
+        mode = " (using placeholder)" if design.replace_with_placeholder else ""
+        _progress(progress, f"assembling {design.name}{mode} ... ({index}/{total_designs})")
         source, topcell, source_bottom_left, target_origin = _design_source(config, design, strict_dummy)
         bbox = design.bbox
         _add_gds_reference(
