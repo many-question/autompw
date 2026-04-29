@@ -78,7 +78,7 @@ def placeholders(config: Path = typer.Argument(DEFAULT_CONFIG), dry_run: bool = 
 @app.command()
 def assemble(config: Path = typer.Argument(DEFAULT_CONFIG), strict_dummy: bool = True) -> None:
     project = load_config(config)
-    out = assemble_gds(project, strict_dummy=strict_dummy)
+    out = assemble_gds(project, strict_dummy=strict_dummy, progress=typer.echo)
     typer.echo(str(out))
 
 
@@ -91,7 +91,7 @@ def run_all(config: Path = typer.Argument(DEFAULT_CONFIG), dry_run_calibre: bool
     generate_framework(project)
     run_mpw_dummy_fill(project, dry_run=dry_run_calibre)
     run_placeholders(project, dry_run=dry_run_calibre)
-    out = assemble_gds(project, strict_dummy=not dry_run_calibre)
+    out = assemble_gds(project, strict_dummy=not dry_run_calibre, progress=typer.echo)
     typer.echo(str(out))
 
 

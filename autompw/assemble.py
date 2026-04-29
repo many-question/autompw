@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from dataclasses import asdict
 from pathlib import Path
+from typing import Callable
 
 import klayout.db as kdb
 
@@ -12,7 +13,12 @@ from .framework import placeholder_final_path
 from .gds_io import dbu_to_iu, get_top_cell, make_layout, read_layout, write_layout
 
 
-def assemble(config: ProjectConfig, output_path: Path | None = None, strict_dummy: bool = True) -> Path:
+def assemble(
+    config: ProjectConfig,
+    output_path: Path | None = None,
+    strict_dummy: bool = True,
+    progress: Callable[[str], None] | None = None,
+) -> Path:
     out = output_path or config.resolve(config.output.final_gds)
     layout = make_layout(config.gds.dbu_um)
     top = layout.create_cell(config.topcell)
@@ -20,10 +26,12 @@ def assemble(config: ProjectConfig, output_path: Path | None = None, strict_dumm
 
     framework = config.resolve(config.output.framework_gds)
     if framework.exists():
+        _progress(progress, f"assembling framework ...")
         _add_gds_reference(layout, top, framework, config.topcell, 0.0, 0.0, f"FW_{config.topcell}", config)
 
     for task in build_mpw_dummy_tasks(config):
         if task.output_gds.exists():
+            _progress(progress, f"assembling dummy {task.flow_name} ...")
             _add_gds_reference(
                 layout,
                 top,
@@ -36,7 +44,9 @@ def assemble(config: ProjectConfig, output_path: Path | None = None, strict_dumm
                 (0.0, 0.0),
             )
 
-    for design in config.designs:
+    total_designs = len(config.designs)
+    for index, design in enumerate(config.designs, start=1):
+        _progress(progress, f"assembling {design.name} ... ({index}/{total_designs})")
         source, topcell, source_bottom_left, target_origin = _design_source(config, design, strict_dummy)
         bbox = design.bbox
         _add_gds_reference(
@@ -62,11 +72,18 @@ def assemble(config: ProjectConfig, output_path: Path | None = None, strict_dumm
         )
 
     if config.gds.flatten_final:
+        _progress(progress, "flattening final layout ...")
         top.flatten(True)
+    _progress(progress, f"writing final GDS {out} ...")
     write_layout(layout, out)
     manifest_path = out.with_suffix(".manifest.json")
     manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
     return out
+
+
+def _progress(progress: Callable[[str], None] | None, message: str) -> None:
+    if progress is not None:
+        progress(message)
 
 
 def _design_source(

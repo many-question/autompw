@@ -176,6 +176,40 @@ designs:
     assert region.bbox() == kdb.Box(20000, 30000, 30000, 40000)
 
 
+def test_assemble_reports_design_progress(tmp_path: Path):
+    input_gds = tmp_path / "block.gds"
+    _write_mock_block(input_gds)
+    config = tmp_path / "config.yaml"
+    config.write_text(
+        f"""
+mpw:
+  name: MPW_TEST
+  size_um: [100, 100]
+layers:
+  marker: [0, 0]
+gds:
+  topcell: MPW_TEST
+  dbu_um: 0.001
+output:
+  final_gds: ./build/final.gds
+designs:
+  - name: block
+    gds: {input_gds.as_posix()}
+    topcell: BLOCK
+    size_um: [10, 10]
+    coord: [20, 30]
+    anchor: bottom_left
+""",
+        encoding="utf-8",
+    )
+    project = load_config(config)
+    messages = []
+
+    assemble(project, progress=messages.append)
+
+    assert "assembling block ... (1/1)" in messages
+
+
 def test_assemble_keeps_dummy_fill_absolute_coordinates(tmp_path: Path):
     input_gds = tmp_path / "block.gds"
     _write_mock_block(input_gds)
