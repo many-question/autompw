@@ -12,7 +12,7 @@ from .assemble import assemble as assemble_gds
 from .config import load_config
 from .dummy import run_mpw_dummy_fill, run_placeholders
 from .framework import generate_framework
-from .gds_io import inspect_gds
+from .gds_io import inspect_gds, write_gds_inspection_text
 from .report import CheckItem, check_project_steps, run_check_step
 from .templates import init_process
 
@@ -97,6 +97,8 @@ def run_all(config: Path = typer.Argument(DEFAULT_CONFIG), dry_run_calibre: bool
 
 @app.command("inspect-gds")
 def inspect(path: Path) -> None:
+    text_report = write_gds_inspection_text(path)
+    typer.echo(f"text report: {text_report}")
     typer.echo(json.dumps(inspect_gds(path), indent=2))
 
 

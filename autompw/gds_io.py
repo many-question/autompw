@@ -80,3 +80,29 @@ def inspect_gds(path: Path) -> dict[str, object]:
             }
         )
     return {"path": str(path), "dbu_um": layout.dbu, "topcells": top_data, "layers": layers}
+
+
+def write_gds_inspection_text(path: Path, output_path: Path | None = None) -> Path:
+    info = inspect_gds(path)
+    out = output_path or path.with_suffix(".txt")
+    lines = [
+        f"path: {info['path']}",
+        f"dbu_um: {info['dbu_um']}",
+        "topcells:",
+    ]
+    for topcell in info["topcells"]:
+        bbox = topcell["bbox_um"]
+        lines.append(f"  {topcell['name']}")
+        if bbox is None:
+            lines.append("    bbox_um: empty")
+            lines.append("    size_um: empty")
+        else:
+            width = bbox[2] - bbox[0]
+            height = bbox[3] - bbox[1]
+            lines.append(f"    bbox_um: {bbox[0]:.6f}, {bbox[1]:.6f}, {bbox[2]:.6f}, {bbox[3]:.6f}")
+            lines.append(f"    size_um: {width:.6f}, {height:.6f}")
+    lines.append("layers:")
+    for layer, datatype in info["layers"]:
+        lines.append(f"{layer}/{datatype}")
+    out.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return out

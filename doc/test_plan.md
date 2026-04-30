@@ -68,6 +68,7 @@ autompw inspect-gds MPW_2512.gds
 - `dbu_um` 为 `0.001`
 - topcell 为 `MPW_2512`
 - bbox 为 `[0, 0, 3333, 2222]`
+- 同目录生成纯文本报告 `MPW_2512.txt`，其中 layer/datatype 一行一个
 
 ## 5. 检查初始化后的配置
 

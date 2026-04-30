@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import klayout.db as kdb
 from typer.testing import CliRunner
 
 from autompw.cli import app
@@ -82,3 +83,28 @@ designs:
     assert "[design_gds] - WARNING:" in result.output
     assert "[calibre_command] - CHECKING..." in result.output
     assert "[calibre_command] - WARNING:" in result.output
+
+
+def test_inspect_gds_writes_plain_text_report(tmp_path: Path):
+    gds = tmp_path / "sample.gds"
+    _write_sample_gds(gds)
+
+    result = CliRunner().invoke(app, ["inspect-gds", str(gds)])
+
+    report = tmp_path / "sample.txt"
+    assert result.exit_code == 0
+    assert report.exists()
+    text = report.read_text(encoding="utf-8")
+    assert "topcells:" in text
+    assert "TOP" in text
+    assert "size_um: 10.000000, 20.000000" in text
+    assert "1/0" in text
+    assert "text report:" in result.output
+
+
+def _write_sample_gds(path: Path) -> None:
+    layout = kdb.Layout()
+    layout.dbu = 0.001
+    top = layout.create_cell("TOP")
+    top.shapes(layout.layer(1, 0)).insert(kdb.Box(0, 0, 10000, 20000))
+    layout.write(str(path))

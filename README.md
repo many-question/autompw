@@ -282,7 +282,14 @@ autompw all --dry-run-calibre
 autompw inspect-gds MPW_2512.gds
 ```
 
-输出包含 DBU、topcell、bbox 和 layer/datatype 列表。
+控制台输出 JSON 信息，同时会在 GDS 同目录写出一个纯文本报告，例如 `MPW_2512.txt`。文本报告包含 DBU、topcell bbox、尺寸，以及所有 layer/datatype；层次信息一行一个，例如：
+
+```text
+layers:
+0/0
+150/1
+162/2
+```
 
 ## 配置文件
 
