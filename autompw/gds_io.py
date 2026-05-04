@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from pathlib import Path
+import re
+from collections.abc import Sequence
 
 import klayout.db as kdb
 
@@ -82,8 +84,74 @@ def inspect_gds(path: Path) -> dict[str, object]:
     return {"path": str(path), "dbu_um": layout.dbu, "topcells": top_data, "layers": layers}
 
 
-def write_gds_inspection_text(path: Path, output_path: Path | None = None) -> Path:
+def inspect_sram_instances(path: Path, prefixes: Sequence[str]) -> dict[str, object]:
+    layout = read_layout(path)
+    patterns = [
+        re.compile(rf"^{re.escape(prefix)}(?P<rows>\d+)x(?P<cols>\d+)")
+        for prefix in prefixes
+        if prefix
+    ]
+    instances: list[dict[str, object]] = []
+
+    def match_sram(cell_name: str) -> tuple[int, int] | None:
+        for pattern in patterns:
+            match = pattern.search(cell_name)
+            if match:
+                return int(match.group("rows")), int(match.group("cols"))
+        return None
+
+    def append_sram(cell_path: str, cell_name: str, multiplicity: int) -> None:
+        size = match_sram(cell_name)
+        if not size:
+            return
+        rows, cols = size
+        bits = rows * cols
+        instances.append(
+            {
+                "path": cell_path,
+                "cell": cell_name,
+                "rows": rows,
+                "cols": cols,
+                "bits": bits,
+                "multiplicity": multiplicity,
+                "total_bits": bits * multiplicity,
+            }
+        )
+
+    def walk(cell: kdb.Cell, cell_path: str, parent_multiplicity: int) -> None:
+        for inst in cell.each_inst():
+            child = layout.cell(inst.cell_index)
+            if child is None:
+                continue
+            multiplicity = parent_multiplicity * _instance_multiplicity(inst)
+            child_path = f"{cell_path}/{child.name}"
+            append_sram(child_path, child.name, multiplicity)
+            walk(child, child_path, multiplicity)
+
+    for top in layout.top_cells():
+        append_sram(top.name, top.name, 1)
+        walk(top, top.name, 1)
+
+    return {
+        "prefixes": tuple(prefixes),
+        "instances": instances,
+        "total_bits": sum(int(instance["total_bits"]) for instance in instances),
+    }
+
+
+def _instance_multiplicity(inst: kdb.Instance) -> int:
+    if inst.is_regular_array():
+        return max(1, int(inst.na)) * max(1, int(inst.nb))
+    return 1
+
+
+def write_gds_inspection_text(
+    path: Path,
+    output_path: Path | None = None,
+    sram_prefixes: Sequence[str] = (),
+) -> Path:
     info = inspect_gds(path)
+    sram = inspect_sram_instances(path, sram_prefixes) if sram_prefixes else None
     out = output_path or path.with_suffix(".txt")
     lines = [
         f"path: {info['path']}",
@@ -104,5 +172,20 @@ def write_gds_inspection_text(path: Path, output_path: Path | None = None) -> Pa
     lines.append("layers:")
     for layer, datatype in info["layers"]:
         lines.append(f"{layer}/{datatype}")
+    if sram:
+        lines.extend(
+            [
+                "sram:",
+                f"prefixes: {', '.join(sram['prefixes'])}",
+                f"total_bits: {sram['total_bits']}",
+                "instances:",
+            ]
+        )
+        for instance in sram["instances"]:
+            lines.append(
+                "{path} | {rows}x{cols} | bits={bits} | count={multiplicity} | total_bits={total_bits}".format(
+                    **instance
+                )
+            )
     out.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return out

@@ -45,3 +45,34 @@ designs:
     assert loaded.calibre.flows["metal"].output_suffix == "_DM"
     assert loaded.designs[0].bottom_left == (5.0, 7.0)
     assert loaded.designs[0].replace_with_placeholder is False
+
+
+def test_load_config_with_inspect_sram_prefixes(tmp_path: Path):
+    config = tmp_path / "config.yaml"
+    config.write_text(
+        """
+mpw:
+  name: MPW_TEST
+  size_um: [1000, 800]
+layers:
+  marker: [0, 0]
+output:
+  framework_gds: ./build/framework.gds
+  final_gds: ./build/final.gds
+inspect:
+  sram_prefixes:
+    - TS1N28HPCPLVTB
+    - TS1N28HPCPHVTB
+designs:
+  - name: block_a
+    gds: ./block_a.gds
+    size_um: [100, 200]
+    coord: [0, 0]
+    anchor: bottom_left
+""",
+        encoding="utf-8",
+    )
+
+    loaded = load_config(config)
+
+    assert loaded.inspect.sram_prefixes == ("TS1N28HPCPLVTB", "TS1N28HPCPHVTB")

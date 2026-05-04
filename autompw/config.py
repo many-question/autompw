@@ -74,6 +74,11 @@ class OutputConfig:
 
 
 @dataclass(frozen=True)
+class InspectConfig:
+    sram_prefixes: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
 class DesignConfig:
     name: str
     gds: Path
@@ -99,6 +104,7 @@ class ProjectConfig:
     designs: tuple[DesignConfig, ...]
     spacing_design_to_design_um: float
     gds: GDSConfig
+    inspect: InspectConfig
 
     @property
     def root(self) -> Path:
@@ -130,6 +136,7 @@ def load_config(path: str | Path) -> ProjectConfig:
     spacing_data = data.get("spacing") or {}
     spacing = float(spacing_data.get("design_to_design_um", 50.0))
     gds = _parse_gds(data.get("gds") or {})
+    inspect = _parse_inspect(data.get("inspect") or {})
 
     return ProjectConfig(
         config_path=config_path,
@@ -140,6 +147,7 @@ def load_config(path: str | Path) -> ProjectConfig:
         designs=designs,
         spacing_design_to_design_um=spacing,
         gds=gds,
+        inspect=inspect,
     )
 
 
@@ -223,6 +231,15 @@ def _parse_gds(data: dict[str, Any]) -> GDSConfig:
         allow_cell_rename=bool(data.get("allow_cell_rename", True)),
         dbu_um=float(data.get("dbu_um", data.get("dbu", 0.001))),
     )
+
+
+def _parse_inspect(data: dict[str, Any]) -> InspectConfig:
+    raw_prefixes = data.get("sram_prefixes", ())
+    if "sram_prefix" in data:
+        raw_prefixes = (data["sram_prefix"],)
+    if isinstance(raw_prefixes, str):
+        raw_prefixes = (raw_prefixes,)
+    return InspectConfig(sram_prefixes=tuple(str(prefix) for prefix in raw_prefixes if str(prefix)))
 
 
 def _parse_design(data: dict[str, Any]) -> DesignConfig:

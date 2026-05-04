@@ -127,7 +127,7 @@ autompw dummy-fill [CONFIG.yaml] [--dry-run]
 autompw placeholders [CONFIG.yaml] [--dry-run]
 autompw assemble [CONFIG.yaml]
 autompw all [CONFIG.yaml] [--dry-run-calibre]
-autompw inspect-gds FILE.gds
+autompw inspect-gds FILE.gds [--config CONFIG.yaml]
 ```
 
 ### `init`
@@ -280,6 +280,7 @@ autompw all --dry-run-calibre
 
 ```bash
 autompw inspect-gds MPW_2512.gds
+autompw inspect-gds MPW_2512.gds --config mpw_config.yaml
 ```
 
 控制台输出 JSON 信息，同时会在 GDS 同目录写出一个纯文本报告，例如 `MPW_2512.txt`。文本报告包含 DBU、topcell bbox、尺寸，以及所有 layer/datatype；层次信息一行一个，例如：
@@ -290,6 +291,18 @@ layers:
 150/1
 162/2
 ```
+
+如果配置文件中设置了 `inspect.sram_prefixes`，文本报告还会遍历 GDS 层次结构，识别符合 `<prefix><rows>x<cols>...` 格式的 SRAM cell，并列出层次路径、单个容量、阵列/层次重复数量和总 bit 数：
+
+```text
+sram:
+prefixes: TS1N28HPCPLVTB
+total_bits: 245760
+instances:
+TOP/WRAP/TS1N28HPCPLVTB512x80M4S | 512x80 | bits=40960 | count=6 | total_bits=245760
+```
+
+GDS 本身没有 instance name，因此这里的层次路径由 cell name 组成。
 
 ## 配置文件
 
@@ -393,6 +406,16 @@ output:
 ```
 
 `output_dir` 是最终输出目录。`framework_gds` 和 `final_gds` 只需要配置文件名，程序会自动放到 `output_dir` 下。MPW dummy fill 输出固定放到 `output/dummy/dummy_<flow>.gds`，placeholder 输出固定放到 `output/placeholders/<design_name>_placeholder.gds`。
+
+### inspect
+
+```yaml
+inspect:
+  sram_prefixes:
+    - TS1N28HPCPLVTB
+```
+
+`sram_prefixes` 用于 `inspect-gds` 的 SRAM 容量统计。SRAM cell 名需要匹配 `<prefix><rows>x<cols>...`，例如 `TS1N28HPCPLVTB512x80M4S` 会被统计为 `512 * 80 = 40960` bit。
 
 ### designs
 

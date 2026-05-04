@@ -68,6 +68,10 @@ output:
   framework_gds: framework.gds
   final_gds: mpw.gds
 
+inspect:
+  sram_prefixes:
+    - TS1N28HPCPLVTB
+
 designs:
   - name: design1
     gds: ./input/design1.gds

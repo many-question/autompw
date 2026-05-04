@@ -96,8 +96,12 @@ def run_all(config: Path = typer.Argument(DEFAULT_CONFIG), dry_run_calibre: bool
 
 
 @app.command("inspect-gds")
-def inspect(path: Path) -> None:
-    text_report = write_gds_inspection_text(path)
+def inspect(path: Path, config: Path = typer.Option(DEFAULT_CONFIG, "--config", "-c")) -> None:
+    sram_prefixes = ()
+    if config.exists():
+        project = load_config(config)
+        sram_prefixes = project.inspect.sram_prefixes
+    text_report = write_gds_inspection_text(path, sram_prefixes=sram_prefixes)
     typer.echo(f"text report: {text_report}")
     typer.echo(json.dumps(inspect_gds(path), indent=2))
 
