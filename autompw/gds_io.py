@@ -87,11 +87,11 @@ def inspect_gds(path: Path) -> dict[str, object]:
 def inspect_sram_instances(path: Path, prefixes: Sequence[str]) -> dict[str, object]:
     layout = read_layout(path)
     patterns = [
-        re.compile(rf"^{re.escape(prefix)}(?P<rows>\d+)x(?P<cols>\d+)")
+        re.compile(rf"^{re.escape(prefix)}(?P<rows>\d+)x(?P<cols>\d+)", re.IGNORECASE)
         for prefix in prefixes
         if prefix
     ]
-    instances: list[dict[str, object]] = []
+    instances: dict[tuple[str, int, int], dict[str, object]] = {}
 
     def match_sram(cell_name: str) -> tuple[int, int] | None:
         for pattern in patterns:
@@ -100,28 +100,53 @@ def inspect_sram_instances(path: Path, prefixes: Sequence[str]) -> dict[str, obj
                 return int(match.group("rows")), int(match.group("cols"))
         return None
 
+    sram_cell_indexes = set()
+    for cell in layout.each_cell():
+        if match_sram(cell.name):
+            sram_cell_indexes.add(cell.cell_index())
+    has_sram_cache: dict[int, bool] = {}
+
+    def has_sram_descendant(cell: kdb.Cell) -> bool:
+        cell_index = cell.cell_index()
+        if cell_index in has_sram_cache:
+            return has_sram_cache[cell_index]
+        if cell_index in sram_cell_indexes:
+            has_sram_cache[cell_index] = True
+            return True
+        for inst in cell.each_inst():
+            child = layout.cell(inst.cell_index)
+            if child is not None and has_sram_descendant(child):
+                has_sram_cache[cell_index] = True
+                return True
+        has_sram_cache[cell_index] = False
+        return False
+
     def append_sram(cell_path: str, cell_name: str, multiplicity: int) -> None:
         size = match_sram(cell_name)
         if not size:
             return
         rows, cols = size
         bits = rows * cols
-        instances.append(
-            {
+        key = cell_path, rows, cols
+        if key not in instances:
+            instances[key] = {
                 "path": cell_path,
                 "cell": cell_name,
                 "rows": rows,
                 "cols": cols,
                 "bits": bits,
-                "multiplicity": multiplicity,
-                "total_bits": bits * multiplicity,
+                "multiplicity": 0,
+                "total_bits": 0,
             }
-        )
+        instances[key]["multiplicity"] = int(instances[key]["multiplicity"]) + multiplicity
+        instances[key]["total_bits"] = int(instances[key]["total_bits"]) + bits * multiplicity
 
     def walk(cell: kdb.Cell, cell_path: str, parent_multiplicity: int) -> None:
         for inst in cell.each_inst():
             child = layout.cell(inst.cell_index)
             if child is None:
+                continue
+            if not has_sram_descendant(child):
                 continue
             multiplicity = parent_multiplicity * _instance_multiplicity(inst)
             child_path = f"{cell_path}/{child.name}"
@@ -134,8 +159,8 @@ def inspect_sram_instances(path: Path, prefixes: Sequence[str]) -> dict[str, obj
 
     return {
         "prefixes": tuple(prefixes),
-        "instances": instances,
-        "total_bits": sum(int(instance["total_bits"]) for instance in instances),
+        "instances": list(instances.values()),
+        "total_bits": sum(int(instance["total_bits"]) for instance in instances.values()),
     }
 
 

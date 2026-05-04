@@ -71,6 +71,7 @@ output:
 inspect:
   sram_prefixes:
     - TS1N28HPCPLVTB
+    - TS1N28HPCPSVTB
 
 designs:
   - name: design1

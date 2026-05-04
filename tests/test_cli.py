@@ -112,7 +112,7 @@ def test_inspect_gds_reports_sram_capacity(tmp_path: Path):
     text = report.read_text(encoding="utf-8")
     assert "sram:" in text
     assert "total_bits: 245760" in text
-    assert "TOP/WRAP/TS1N28HPCPLVTB512x80M4S" in text
+    assert "TOP/WRAP/TS1N28HPCPLVTB512X80M4S" in text
     assert "512x80" in text
     assert "bits=40960" in text
     assert "count=6" in text
@@ -131,7 +131,7 @@ def _write_sram_gds(path: Path) -> None:
     layout.dbu = 0.001
     top = layout.create_cell("TOP")
     wrapper = layout.create_cell("WRAP")
-    sram = layout.create_cell("TS1N28HPCPLVTB512x80M4S")
+    sram = layout.create_cell("TS1N28HPCPLVTB512X80M4S")
     wrapper.insert(
         kdb.CellInstArray(
             sram.cell_index(),

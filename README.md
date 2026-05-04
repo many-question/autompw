@@ -413,9 +413,10 @@ output:
 inspect:
   sram_prefixes:
     - TS1N28HPCPLVTB
+    - TS1N28HPCPSVTB
 ```
 
-`sram_prefixes` 用于 `inspect-gds` 的 SRAM 容量统计。SRAM cell 名需要匹配 `<prefix><rows>x<cols>...`，例如 `TS1N28HPCPLVTB512x80M4S` 会被统计为 `512 * 80 = 40960` bit。
+`sram_prefixes` 用于 `inspect-gds` 的 SRAM 容量统计。SRAM cell 名需要匹配 `<prefix><rows>x<cols>...`，其中 `x` 大小写均可，例如 `TS1N28HPCPLVTB512X80M4S` 会被统计为 `512 * 80 = 40960` bit。
 
 ### designs
 
