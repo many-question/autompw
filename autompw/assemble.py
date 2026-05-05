@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+import hashlib
 import json
-from dataclasses import asdict
 from pathlib import Path
 from typing import Callable
 
@@ -23,11 +23,13 @@ def assemble(
     layout = make_layout(config.gds.dbu_um)
     top = layout.create_cell(config.topcell)
     manifest: dict[str, object] = {"topcell": config.topcell, "placements": []}
+    assembled_sources: list[Path] = []
 
     framework = config.resolve(config.output.framework_gds)
     if framework.exists():
         _progress(progress, f"assembling framework ...")
         _add_gds_reference(layout, top, framework, config.topcell, 0.0, 0.0, f"FW_{config.topcell}", config)
+        assembled_sources.append(framework)
 
     for task in build_mpw_dummy_tasks(config):
         if task.output_gds.exists():
@@ -43,12 +45,14 @@ def assemble(
                 config,
                 (0.0, 0.0),
             )
+            assembled_sources.append(task.output_gds)
 
     total_designs = len(config.designs)
     for index, design in enumerate(config.designs, start=1):
         mode = " (using placeholder)" if design.replace_with_placeholder else ""
         _progress(progress, f"assembling {design.name}{mode} ... ({index}/{total_designs})")
         source, topcell, source_bottom_left, target_origin = _design_source(config, design, strict_dummy)
+        assembled_sources.append(source)
         bbox = design.bbox
         _add_gds_reference(
             layout,
@@ -79,7 +83,49 @@ def assemble(
     write_layout(layout, out)
     manifest_path = out.with_suffix(".manifest.json")
     manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+    write_assemble_summary(out, assembled_sources)
     return out
+
+
+def assemble_summary_path(final_gds: Path) -> Path:
+    return final_gds.with_name(f"{final_gds.stem}.assemble_summary.txt")
+
+
+def write_assemble_summary(final_gds: Path, source_gds_files: list[Path]) -> Path:
+    out = assemble_summary_path(final_gds)
+    lines = [
+        "final_gds:",
+        *_file_summary_lines(final_gds, "  "),
+        "assembled_gds:",
+    ]
+    for source in source_gds_files:
+        lines.extend(_file_summary_lines(source, "  "))
+    out.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return out
+
+
+def _file_summary_lines(path: Path, indent: str = "") -> list[str]:
+    stat = path.stat()
+    return [
+        f"{indent}path: {path}",
+        f"{indent}size_bytes: {stat.st_size}",
+        f"{indent}modified_time: {_format_mtime(stat.st_mtime)}",
+        f"{indent}md5: {_md5(path)}",
+    ]
+
+
+def _format_mtime(timestamp: float) -> str:
+    from datetime import datetime
+
+    return datetime.fromtimestamp(timestamp).isoformat(timespec="seconds")
+
+
+def _md5(path: Path) -> str:
+    digest = hashlib.md5()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def _progress(progress: Callable[[str], None] | None, message: str) -> None:

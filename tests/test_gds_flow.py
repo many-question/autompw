@@ -1,4 +1,5 @@
 from pathlib import Path
+import hashlib
 
 import klayout.db as kdb
 
@@ -51,6 +52,15 @@ designs:
 
     assert framework.exists()
     assert final.exists()
+    summary = final.with_name("final.assemble_summary.txt")
+    assert summary.exists()
+    summary_text = summary.read_text(encoding="utf-8")
+    assert "final_gds:" in summary_text
+    assert f"path: {final}" in summary_text
+    assert f"md5: {_md5(final)}" in summary_text
+    assert "assembled_gds:" in summary_text
+    assert f"path: {framework}" in summary_text
+    assert f"path: {input_gds}" in summary_text
     framework_layout = read_layout(framework)
     framework_top = get_top_cell(framework_layout, "MPW_TEST")
     marker_layer = framework_layout.layer(0, 0)
@@ -392,3 +402,11 @@ def _write_mock_block(
     layer_index = layout.layer(*layer)
     top.shapes(layer_index).insert(box or kdb.Box(0, 0, 10000, 10000))
     layout.write(str(path))
+
+
+def _md5(path: Path) -> str:
+    digest = hashlib.md5()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
