@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
-from typing import Callable
+from typing import Callable, TypedDict
 
 import klayout.db as kdb
 
@@ -11,6 +11,13 @@ from .config import DesignConfig, ProjectConfig
 from .dummy import build_mpw_dummy_tasks
 from .framework import placeholder_final_path
 from .gds_io import dbu_to_iu, get_top_cell, make_layout, read_layout, write_layout
+
+
+class AssembleSource(TypedDict):
+    design_name: str
+    coord_um: tuple[float, float]
+    anchor: str
+    path: Path
 
 
 def assemble(
@@ -23,13 +30,15 @@ def assemble(
     layout = make_layout(config.gds.dbu_um)
     top = layout.create_cell(config.topcell)
     manifest: dict[str, object] = {"topcell": config.topcell, "placements": []}
-    assembled_sources: list[Path] = []
+    assembled_sources: list[AssembleSource] = []
 
     framework = config.resolve(config.output.framework_gds)
     if framework.exists():
         _progress(progress, f"assembling framework ...")
         _add_gds_reference(layout, top, framework, config.topcell, 0.0, 0.0, f"FW_{config.topcell}", config)
-        assembled_sources.append(framework)
+        assembled_sources.append(
+            {"design_name": "framework", "coord_um": (0.0, 0.0), "anchor": "bottom_left", "path": framework}
+        )
 
     for task in build_mpw_dummy_tasks(config):
         if task.output_gds.exists():
@@ -45,14 +54,28 @@ def assemble(
                 config,
                 (0.0, 0.0),
             )
-            assembled_sources.append(task.output_gds)
+            assembled_sources.append(
+                {
+                    "design_name": f"dummy_{task.flow_name}",
+                    "coord_um": (0.0, 0.0),
+                    "anchor": "bottom_left",
+                    "path": task.output_gds,
+                }
+            )
 
     total_designs = len(config.designs)
     for index, design in enumerate(config.designs, start=1):
         mode = " (using placeholder)" if design.replace_with_placeholder else ""
         _progress(progress, f"assembling {design.name}{mode} ... ({index}/{total_designs})")
         source, topcell, source_bottom_left, target_origin = _design_source(config, design, strict_dummy)
-        assembled_sources.append(source)
+        assembled_sources.append(
+            {
+                "design_name": design.name,
+                "coord_um": design.coord,
+                "anchor": design.anchor.value,
+                "path": source,
+            }
+        )
         bbox = design.bbox
         _add_gds_reference(
             layout,
@@ -91,7 +114,7 @@ def assemble_summary_path(final_gds: Path) -> Path:
     return final_gds.with_name(f"{final_gds.stem}.assemble_summary.txt")
 
 
-def write_assemble_summary(final_gds: Path, source_gds_files: list[Path]) -> Path:
+def write_assemble_summary(final_gds: Path, source_gds_files: list[AssembleSource]) -> Path:
     out = assemble_summary_path(final_gds)
     lines = [
         "final_gds:",
@@ -99,7 +122,12 @@ def write_assemble_summary(final_gds: Path, source_gds_files: list[Path]) -> Pat
         "assembled_gds:",
     ]
     for source in source_gds_files:
-        lines.extend(_file_summary_lines(source, "  "))
+        if lines[-1] != "assembled_gds:":
+            lines.append("")
+        lines.append(f"  design_name: {source['design_name']}")
+        lines.append(f"  coord_um: {source['coord_um'][0]}, {source['coord_um'][1]}")
+        lines.append(f"  anchor: {source['anchor']}")
+        lines.extend(_file_summary_lines(source["path"], "  "))
     out.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return out
 

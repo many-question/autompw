@@ -254,7 +254,7 @@ blank placeholder GDS 只包含 marker 层，不包含 dummy blocker 层或 edge
 autompw assemble
 ```
 
-同时会在最终 GDS 旁边生成 placement manifest 和 assemble 汇总确认文件。汇总确认文件名为 `<final_gds_stem>.assemble_summary.txt`，用于和 `inspect-gds` 生成的 `<gds_stem>.txt` 区分；内容包括最终 GDS 以及所有参与 assemble 的 GDS 的路径、文件大小、修改时间和 MD5。
+同时会在最终 GDS 旁边生成 placement manifest 和 assemble 汇总确认文件。汇总确认文件名为 `<final_gds_stem>.assemble_summary.txt`，用于和 `inspect-gds` 生成的 `<gds_stem>.txt` 区分；内容包括最终 GDS 的路径、文件大小、修改时间和 MD5，以及所有参与 assemble 的 GDS 的 design name、坐标、anchor、路径、文件大小、修改时间和 MD5。各 design 条目之间会用空行分隔。
 
 ### `all`
 

@@ -59,8 +59,13 @@ designs:
     assert f"path: {final}" in summary_text
     assert f"md5: {_md5(final)}" in summary_text
     assert "assembled_gds:" in summary_text
+    assert "design_name: framework" in summary_text
     assert f"path: {framework}" in summary_text
+    assert "\n\n  design_name: block\n" in summary_text
+    assert "coord_um: 20.0, 20.0" in summary_text
+    assert "anchor: bottom_left" in summary_text
     assert f"path: {input_gds}" in summary_text
+    assert f"path: {framework}\n" in summary_text
     framework_layout = read_layout(framework)
     framework_top = get_top_cell(framework_layout, "MPW_TEST")
     marker_layer = framework_layout.layer(0, 0)
