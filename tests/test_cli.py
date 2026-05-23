@@ -64,7 +64,7 @@ def test_version_outputs_package_location():
     result = CliRunner().invoke(app, ["version"])
 
     assert result.exit_code == 0
-    assert "autompw 0.1.1" in result.output
+    assert "autompw 0.2.0" in result.output
     assert "module " in result.output
 
 

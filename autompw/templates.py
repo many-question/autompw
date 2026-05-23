@@ -3,6 +3,8 @@ from __future__ import annotations
 import os
 import shutil
 import sys
+import sysconfig
+import site
 from pathlib import Path
 
 
@@ -10,14 +12,27 @@ def template_root() -> Path:
     override = os.environ.get("AUTOMPW_TEMPLATE_DIR")
     if override:
         return Path(override).expanduser().resolve()
-    candidates = [
-        Path(__file__).resolve().parent.parent / "templates",
-        Path(sys.prefix) / "templates",
-    ]
-    for candidate in candidates:
+    for candidate in template_candidates():
         if candidate.exists():
             return candidate
-    return candidates[0]
+    return template_candidates()[0]
+
+
+def template_candidates() -> list[Path]:
+    candidates = [
+        Path(__file__).resolve().parent.parent / "templates",
+        Path(sysconfig.get_path("data")) / "templates",
+        Path(sys.prefix) / "templates",
+        Path(site.getuserbase()) / "templates",
+    ]
+    unique = []
+    seen = set()
+    for candidate in candidates:
+        resolved = candidate.expanduser().resolve()
+        if resolved not in seen:
+            unique.append(resolved)
+            seen.add(resolved)
+    return unique
 
 
 def available_processes() -> list[str]:
