@@ -41,7 +41,7 @@ def enabled_flows(config: ProjectConfig) -> dict[str, CalibreFlowConfig]:
 
 def render_deck(config: ProjectConfig, task: CalibreTask) -> Path:
     template_path = config.resolve(task.flow.deck_template)
-    text = template_path.read_text(encoding="utf-8", errors="ignore")
+    text = template_path.read_text(encoding="utf-8-sig", errors="ignore")
     replacements = {
         "input_gds": str(task.input_gds),
         "input_topcell": task.input_topcell,
