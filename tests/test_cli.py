@@ -26,6 +26,22 @@ def test_init_writes_default_config(tmp_path: Path):
         assert "replace_with_placeholder" in text
 
 
+def test_init_supports_tsmc180_template(tmp_path: Path):
+    runner = CliRunner()
+    with runner.isolated_filesystem(temp_dir=tmp_path):
+        result = runner.invoke(app, ["init", "tsmc180"])
+
+        assert result.exit_code == 0
+        assert Path("mpw_config.yaml").exists()
+        assert Path("deck/dmfill_metal").exists()
+        assert Path("deck/dmfill_odpo").exists()
+        text = Path("mpw_config.yaml").read_text(encoding="utf-8")
+        assert "location: inside" in text
+        assert "include_mpw: true" in text
+        assert "layer: [150, 15]" in text
+        assert "deck_template: ./deck/dmfill_odpo" in text
+
+
 def test_init_requires_process_name():
     runner = CliRunner()
     result = runner.invoke(app, ["init"])

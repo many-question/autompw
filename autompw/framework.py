@@ -18,6 +18,8 @@ def generate_framework(config: ProjectConfig, output_path: Path | None = None) -
 
     marker_layer = layer_index(layout, config.layers.marker)
     top.shapes(marker_layer).insert(box_from_bbox(config.mpw.bbox, layout.dbu))
+    if config.layers.edge_fill_include_mpw:
+        _insert_edge_layers(layout, top, config.mpw.bbox, config, config.mpw.bbox)
     for design in config.designs:
         _insert_design_markers(layout, top, design, marker_layer, config, config.mpw.bbox)
 
@@ -99,9 +101,18 @@ def _insert_edge_layers(
     if not config.layers.edge_fill_layers:
         return
     width = config.layers.edge_fill_width_um
-    outer = box_from_bbox(BBox(bbox.xmin - width, bbox.ymin - width, bbox.xmax + width, bbox.ymax + width), layout.dbu)
-    inner = box_from_bbox(bbox, layout.dbu)
-    ring = (kdb.Region(outer) - kdb.Region(inner)) & kdb.Region(box_from_bbox(clip_bbox, layout.dbu))
+    if config.layers.edge_fill_location == "inside":
+        outer = box_from_bbox(bbox, layout.dbu)
+        inner_bbox = BBox(bbox.xmin + width, bbox.ymin + width, bbox.xmax - width, bbox.ymax - width)
+        if inner_bbox.xmax <= inner_bbox.xmin or inner_bbox.ymax <= inner_bbox.ymin:
+            ring = kdb.Region(outer)
+        else:
+            ring = kdb.Region(outer) - kdb.Region(box_from_bbox(inner_bbox, layout.dbu))
+    else:
+        outer = box_from_bbox(BBox(bbox.xmin - width, bbox.ymin - width, bbox.xmax + width, bbox.ymax + width), layout.dbu)
+        inner = box_from_bbox(bbox, layout.dbu)
+        ring = kdb.Region(outer) - kdb.Region(inner)
+    ring &= kdb.Region(box_from_bbox(clip_bbox, layout.dbu))
     if ring.is_empty():
         return
     for layer in config.layers.edge_fill_layers:

@@ -37,6 +37,8 @@ class LayersConfig:
     dummy_blocker: tuple[DummyBlockerLayer, ...] = ()
     edge_fill_layers: tuple[tuple[int, int], ...] = ()
     edge_fill_width_um: float = 0.45
+    edge_fill_location: str = "outside"
+    edge_fill_include_mpw: bool = False
 
 
 @dataclass(frozen=True)
@@ -185,6 +187,8 @@ def _parse_layers(data: dict[str, Any]) -> LayersConfig:
         dummy_blocker=tuple(blocker_layers),
         edge_fill_layers=tuple(require_layer(layer, "edge_fill.layers[]") for layer in edge.get("layers") or []),
         edge_fill_width_um=float(edge.get("ring_width_um", edge.get("width_um", 0.45))),
+        edge_fill_location=str(edge.get("location", edge.get("side", "outside"))),
+        edge_fill_include_mpw=bool(edge.get("include_mpw", False)),
     )
 
 

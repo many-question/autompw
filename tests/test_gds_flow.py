@@ -395,6 +395,43 @@ designs:
     assert edge_region.bbox().bottom == 0
 
 
+def test_framework_can_generate_inside_edge_fill_for_mpw_and_design(tmp_path: Path):
+    config = tmp_path / "config.yaml"
+    config.write_text(
+        """
+mpw:
+  name: MPW_TEST
+  size_um: [100, 100]
+layers:
+  marker: [0, 0]
+  edge_fill:
+    layers: [[55, 0]]
+    ring_width_um: 2
+    location: inside
+    include_mpw: true
+output:
+  framework_gds: ./build/framework.gds
+  final_gds: ./build/final.gds
+designs:
+  - name: block
+    gds: ./block.gds
+    size_um: [20, 30]
+    coord: [10, 20]
+    anchor: bottom_left
+""",
+        encoding="utf-8",
+    )
+    project = load_config(config)
+
+    framework = generate_framework(project)
+
+    layout = read_layout(framework)
+    top = get_top_cell(layout, "MPW_TEST")
+    edge_region = kdb.Region(top.begin_shapes_rec(layout.layer(55, 0))).merged()
+    assert edge_region.bbox() == kdb.Box(0, 0, 100000, 100000)
+    assert round(edge_region.area() * layout.dbu * layout.dbu) == 968
+
+
 def _write_mock_block(
     path: Path,
     box: kdb.Box | None = None,

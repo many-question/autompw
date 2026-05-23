@@ -1,0 +1,85 @@
+mpw:
+  name: MPW
+  size_um: [5000, 5000]
+  origin: [0, 0]
+
+spacing:
+  design_to_design_um: 50
+
+calibre:
+  executable: calibre
+  args: "-drc -hier -turbo 32 -turbo_all -hyper connect"
+  work_dir: ./work
+  flows:
+    metal:
+      enabled: true
+      deck_template: ./deck/dmfill_metal
+      output_suffix: _DM
+      summary_name: DM.sum
+    odpo:
+      enabled: true
+      deck_template: ./deck/dmfill_odpo
+      output_suffix: _DOD
+      summary_name: DOD.sum
+
+layers:
+  marker: [0, 0]
+  dummy_blocker:
+    layers:
+      - layer: [150, 1]
+        grow_um: 1
+      - layer: [150, 2]
+        grow_um: 1
+      - layer: [150, 3]
+        grow_um: 1
+      - layer: [150, 4]
+        grow_um: 1
+      - layer: [150, 5]
+        grow_um: 1
+      - layer: [150, 6]
+        grow_um: 1
+      - layer: [150, 7]
+        grow_um: 1
+      - layer: [150, 15]
+        grow_um: 1
+      - layer: [150, 20]
+        grow_um: 1
+      - layer: [150, 21]
+        grow_um: 1
+  edge_fill:
+    layers:
+      - [55, 0]
+    ring_width_um: 12
+    location: inside
+    include_mpw: true
+
+gds:
+  topcell: MPW
+  dbu_um: 0.001
+  flatten_final: false
+  preserve_child_cells: true
+  allow_cell_rename: true
+
+output:
+  output_dir: ./output
+  framework_gds: framework.gds
+  final_gds: mpw.gds
+
+designs:
+  - name: design1
+    gds: ./input/design1.gds
+    topcell: DESIGN1
+    size_um: [1000, 1000]
+    coord: [0, 0]
+    anchor: bottom_left
+    bottom_left: [0, 0]
+    replace_with_placeholder: false
+
+  - name: design2
+    gds: ./input/design2.gds
+    topcell: DESIGN2
+    size_um: [1000, 1000]
+    coord: [1100, 0]
+    anchor: bottom_left
+    bottom_left: [0, 0]
+    replace_with_placeholder: true

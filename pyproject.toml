@@ -21,6 +21,11 @@ packages = ["autompw"]
   "templates/tsmc28/deck/dmfill_metal",
   "templates/tsmc28/deck/dmfill_odpo",
 ]
+"templates/tsmc180" = ["templates/tsmc180/mpw_config.yaml"]
+"templates/tsmc180/deck" = [
+  "templates/tsmc180/deck/dmfill_metal",
+  "templates/tsmc180/deck/dmfill_odpo",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

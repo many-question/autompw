@@ -3,6 +3,8 @@ from pathlib import Path
 from autompw.calibre import render_deck
 from autompw.config import load_config
 from autompw.dummy import build_mpw_dummy_tasks, build_placeholder_tasks
+from autompw.report import check_calibre_decks
+from autompw.templates import init_process
 
 
 def test_render_deck_replaces_runtime_header_fields(tmp_path: Path):
@@ -134,3 +136,22 @@ designs:
     assert task.y0_um == 0
     assert task.x1_um == 10
     assert task.y1_um == 12
+
+
+def test_tsmc180_decks_render_runtime_fields(tmp_path: Path):
+    init_process("tsmc180", tmp_path)
+    project = load_config(tmp_path / "mpw_config.yaml")
+
+    assert check_calibre_decks(project) == []
+    tasks = build_mpw_dummy_tasks(project)
+    assert {task.flow_name for task in tasks} == {"metal", "odpo"}
+
+    for task in tasks:
+        rendered = render_deck(project, task).read_text(encoding="utf-8")
+        assert "{{" not in rendered
+        assert "5V.gds" not in rendered
+        assert 'LAYOUT PRIMARY "MPW"' in rendered
+        assert "VARIABLE xLB   0" in rendered
+        assert "VARIABLE yLB   0" in rendered
+        assert "VARIABLE xRT   5000" in rendered
+        assert "VARIABLE yRT   5000" in rendered
