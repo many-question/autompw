@@ -5,7 +5,7 @@ import klayout.db as kdb
 
 from autompw.assemble import assemble
 from autompw.config import load_config
-from autompw.dummy import merge_placeholder_outputs
+from autompw.dummy import build_placeholder_tasks, merge_placeholder_outputs
 from autompw.framework import FRAMEWORK_LABEL_HEIGHT_UM, _design_label_region, generate_blank_placeholder, generate_framework
 from autompw.gds_io import get_top_cell, read_layout
 
@@ -189,6 +189,94 @@ designs:
     top = get_top_cell(final_layout, "MPW_TEST")
     region = kdb.Region(top.begin_shapes_rec(final_layout.layer(31, 0)))
     assert region.bbox() == kdb.Box(20000, 30000, 30000, 40000)
+
+
+def test_assemble_rotates_design_clockwise_and_uses_rotated_anchor_bbox(tmp_path: Path):
+    input_gds = tmp_path / "rect.gds"
+    _write_mock_block(input_gds, box=kdb.Box(0, 0, 10000, 20000))
+    config = tmp_path / "config.yaml"
+    config.write_text(
+        f"""
+mpw:
+  name: MPW_TEST
+  size_um: [100, 100]
+layers:
+  marker: [0, 0]
+gds:
+  topcell: MPW_TEST
+  dbu_um: 0.001
+output:
+  framework_gds: ./build/framework.gds
+  final_gds: ./build/final.gds
+designs:
+  - name: rect
+    gds: {input_gds.as_posix()}
+    topcell: BLOCK
+    size_um: [10, 20]
+    coord: [20, 30]
+    anchor: bottom_left
+    rotation: 90
+""",
+        encoding="utf-8",
+    )
+    project = load_config(config)
+
+    framework = generate_framework(project)
+    final = assemble(project)
+
+    framework_layout = read_layout(framework)
+    framework_top = get_top_cell(framework_layout, "MPW_TEST")
+    marker_layer = framework_layout.layer(0, 0)
+    marker_boxes = [shape.box for shape in framework_top.shapes(marker_layer).each() if shape.is_box()]
+    assert kdb.Box(20000, 30000, 40000, 40000) in marker_boxes
+
+    final_layout = read_layout(final)
+    top = get_top_cell(final_layout, "MPW_TEST")
+    region = kdb.Region(top.begin_shapes_rec(final_layout.layer(31, 0)))
+    assert region.bbox() == kdb.Box(20000, 30000, 40000, 40000)
+
+
+def test_placeholder_uses_rotated_size_for_marker_and_calibre_window(tmp_path: Path):
+    config = tmp_path / "config.yaml"
+    config.write_text(
+        """
+mpw:
+  name: MPW_TEST
+  size_um: [100, 100]
+layers:
+  marker: [0, 0]
+calibre:
+  flows:
+    metal:
+      deck_template: ./deck.svrf
+      output_suffix: _DM
+      summary_name: DM.sum
+output:
+  framework_gds: ./build/framework.gds
+  final_gds: ./build/final.gds
+designs:
+  - name: block
+    gds: ./block.gds
+    size_um: [12, 8]
+    coord: [0, 0]
+    anchor: bottom_left
+    rotation: 90
+""",
+        encoding="utf-8",
+    )
+    project = load_config(config)
+    design = project.designs[0]
+    out = tmp_path / "blank.gds"
+
+    generate_blank_placeholder(project, design, out)
+    task = build_placeholder_tasks(project, design)[0]
+
+    blank_layout = read_layout(out)
+    top = get_top_cell(blank_layout, "PLACEHOLDER_block")
+    assert top.bbox().width() == 8000
+    assert top.bbox().height() == 12000
+    assert task.width_um == 8
+    assert task.height_um == 12
 
 
 def test_assemble_reports_design_progress(tmp_path: Path):

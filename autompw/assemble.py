@@ -17,6 +17,7 @@ class AssembleSource(TypedDict):
     design_name: str
     coord_um: tuple[float, float]
     anchor: str
+    rotation: int
     path: Path
 
 
@@ -37,7 +38,13 @@ def assemble(
         _progress(progress, f"assembling framework ...")
         _add_gds_reference(layout, top, framework, config.topcell, 0.0, 0.0, f"FW_{config.topcell}", config)
         assembled_sources.append(
-            {"design_name": "framework", "coord_um": (0.0, 0.0), "anchor": "bottom_left", "path": framework}
+            {
+                "design_name": "framework",
+                "coord_um": (0.0, 0.0),
+                "anchor": "bottom_left",
+                "rotation": 0,
+                "path": framework,
+            }
         )
 
     for task in build_mpw_dummy_tasks(config):
@@ -59,6 +66,7 @@ def assemble(
                     "design_name": f"dummy_{task.flow_name}",
                     "coord_um": (0.0, 0.0),
                     "anchor": "bottom_left",
+                    "rotation": 0,
                     "path": task.output_gds,
                 }
             )
@@ -67,12 +75,15 @@ def assemble(
     for index, design in enumerate(config.designs, start=1):
         mode = " (using placeholder)" if design.replace_with_placeholder else ""
         _progress(progress, f"assembling {design.name}{mode} ... ({index}/{total_designs})")
-        source, topcell, source_bottom_left, target_origin = _design_source(config, design, strict_dummy)
+        source, topcell, source_bottom_left, target_origin, source_rotation, source_size = _design_source(
+            config, design, strict_dummy
+        )
         assembled_sources.append(
             {
                 "design_name": design.name,
                 "coord_um": design.coord,
                 "anchor": design.anchor.value,
+                "rotation": design.rotation,
                 "path": source,
             }
         )
@@ -87,6 +98,8 @@ def assemble(
             f"DESIGN_{design.name}",
             config,
             source_bottom_left,
+            source_size,
+            source_rotation,
         )
         manifest["placements"].append(
             {
@@ -95,6 +108,9 @@ def assemble(
                 "topcell": topcell,
                 "placed_bbox_um": bbox.as_list(),
                 "source_bottom_left_um": list(source_bottom_left),
+                "size_um": list(design.size_um),
+                "rotated_size_um": list(design.rotated_size_um),
+                "rotation": design.rotation,
                 "replaced_with_placeholder": design.replace_with_placeholder,
             }
         )
@@ -127,6 +143,7 @@ def write_assemble_summary(final_gds: Path, source_gds_files: list[AssembleSourc
         lines.append(f"  design_name: {source['design_name']}")
         lines.append(f"  coord_um: {source['coord_um'][0]}, {source['coord_um'][1]}")
         lines.append(f"  anchor: {source['anchor']}")
+        lines.append(f"  rotation: {source['rotation']}")
         lines.extend(_file_summary_lines(source["path"], "  "))
     out.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return out
@@ -165,17 +182,17 @@ def _design_source(
     config: ProjectConfig,
     design: DesignConfig,
     strict_dummy: bool,
-) -> tuple[Path, str | None, tuple[float, float], tuple[float, float]]:
+) -> tuple[Path, str | None, tuple[float, float], tuple[float, float], int, tuple[float, float]]:
     bbox = design.bbox
     if not design.replace_with_placeholder:
-        return config.resolve(design.gds), design.topcell, design.bottom_left, (bbox.xmin, bbox.ymin)
+        return config.resolve(design.gds), design.topcell, design.bottom_left, (bbox.xmin, bbox.ymin), design.rotation, design.size_um
 
     placeholder = placeholder_final_path(config, design)
     if placeholder.exists():
-        return placeholder, None, (0.0, 0.0), (bbox.xmin, bbox.ymin)
+        return placeholder, None, (0.0, 0.0), (bbox.xmin, bbox.ymin), 0, design.rotated_size_um
     if strict_dummy:
         raise FileNotFoundError(f"No placeholder GDS found for {design.name}: {placeholder}")
-    return config.resolve(design.gds), design.topcell, design.bottom_left, (bbox.xmin, bbox.ymin)
+    return config.resolve(design.gds), design.topcell, design.bottom_left, (bbox.xmin, bbox.ymin), design.rotation, design.size_um
 
 
 def _add_gds_reference(
@@ -188,6 +205,8 @@ def _add_gds_reference(
     cell_name: str,
     config: ProjectConfig,
     source_bottom_left_um: tuple[float, float] | None = None,
+    source_size_um: tuple[float, float] | None = None,
+    rotation: int = 0,
 ) -> None:
     source_layout = read_layout(source_path)
     if abs(source_layout.dbu - target_layout.dbu) > 1e-12:
@@ -195,16 +214,47 @@ def _add_gds_reference(
     source_top = get_top_cell(source_layout, source_topcell)
     dest = target_layout.create_cell(_unique_cell_name(target_layout, cell_name))
     dest.copy_tree(source_top)
-    bbox = dest.bbox()
+    angle = _rotation_to_trans_angle(rotation)
+    rotation_trans = kdb.Trans(angle, 0, 0)
+    bbox = dest.bbox().transformed(rotation_trans)
     if source_bottom_left_um is None:
         source_left = bbox.left
         source_bottom = bbox.bottom
     else:
-        source_left = dbu_to_iu(source_bottom_left_um[0], target_layout.dbu)
-        source_bottom = dbu_to_iu(source_bottom_left_um[1], target_layout.dbu)
+        source_left, source_bottom = _rotated_source_lower_left(
+            source_bottom_left_um,
+            source_size_um,
+            rotation,
+            target_layout.dbu,
+        )
     dx = dbu_to_iu(target_xmin_um, target_layout.dbu) - source_left
     dy = dbu_to_iu(target_ymin_um, target_layout.dbu) - source_bottom
-    target_top.insert(kdb.CellInstArray(dest.cell_index(), kdb.Trans(dx, dy)))
+    target_top.insert(kdb.CellInstArray(dest.cell_index(), kdb.Trans(angle, dx, dy)))
+
+
+def _rotated_source_lower_left(
+    source_bottom_left_um: tuple[float, float],
+    source_size_um: tuple[float, float] | None,
+    rotation: int,
+    dbu_um: float,
+) -> tuple[int, int]:
+    if source_size_um is None:
+        return dbu_to_iu(source_bottom_left_um[0], dbu_um), dbu_to_iu(source_bottom_left_um[1], dbu_um)
+    left = dbu_to_iu(source_bottom_left_um[0], dbu_um)
+    bottom = dbu_to_iu(source_bottom_left_um[1], dbu_um)
+    right = dbu_to_iu(source_bottom_left_um[0] + source_size_um[0], dbu_um)
+    top = dbu_to_iu(source_bottom_left_um[1] + source_size_um[1], dbu_um)
+    transformed = kdb.Box(left, bottom, right, top).transformed(kdb.Trans(_rotation_to_trans_angle(rotation), 0, 0))
+    return transformed.left, transformed.bottom
+
+
+def _rotation_to_trans_angle(rotation: int) -> int:
+    return {
+        0: kdb.Trans.R0,
+        90: kdb.Trans.R270,
+        180: kdb.Trans.R180,
+        270: kdb.Trans.R90,
+    }[rotation]
 
 
 def _unique_cell_name(layout: kdb.Layout, base: str) -> str:

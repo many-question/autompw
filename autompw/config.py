@@ -87,13 +87,20 @@ class DesignConfig:
     size_um: tuple[float, float]
     coord: tuple[float, float]
     anchor: Anchor
+    rotation: int = 0
     bottom_left: tuple[float, float] = (0.0, 0.0)
     topcell: str | None = None
     replace_with_placeholder: bool = False
 
     @property
+    def rotated_size_um(self) -> tuple[float, float]:
+        if self.rotation in {90, 270}:
+            return self.size_um[1], self.size_um[0]
+        return self.size_um
+
+    @property
     def bbox(self) -> BBox:
-        return bbox_from_anchor(self.coord, self.size_um, self.anchor)
+        return bbox_from_anchor(self.coord, self.rotated_size_um, self.anchor)
 
 
 @dataclass(frozen=True)
@@ -247,6 +254,9 @@ def _parse_inspect(data: dict[str, Any]) -> InspectConfig:
 
 
 def _parse_design(data: dict[str, Any]) -> DesignConfig:
+    rotation = int(data.get("rotation", 0))
+    if rotation not in {0, 90, 180, 270}:
+        raise ValueError(f"design.rotation must be one of 0, 90, 180, 270, got {rotation}")
     return DesignConfig(
         name=str(data["name"]),
         gds=Path(data["gds"]),
@@ -254,6 +264,7 @@ def _parse_design(data: dict[str, Any]) -> DesignConfig:
         size_um=_pair_float(data["size_um"], "design.size_um"),
         coord=_pair_float(data["coord"], "design.coord"),
         anchor=Anchor(data.get("anchor", "bottom_left")),
+        rotation=rotation,
         bottom_left=_pair_float(data.get("bottom_left", [0, 0]), "design.bottom_left"),
         replace_with_placeholder=bool(data.get("replace_with_placeholder", False)),
     )

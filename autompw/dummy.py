@@ -47,6 +47,7 @@ def build_mpw_dummy_tasks(config: ProjectConfig) -> list[CalibreTask]:
 def build_placeholder_tasks(config: ProjectConfig, design: DesignConfig) -> list[CalibreTask]:
     input_gds = placeholder_blank_path(config, design)
     topcell = f"PLACEHOLDER_{design.name}"
+    width_um, height_um = design.rotated_size_um
     tasks = []
     for flow_name, flow in enabled_flows(config).items():
         base = placeholder_output_base(config, design, flow_name)
@@ -62,8 +63,8 @@ def build_placeholder_tasks(config: ProjectConfig, design: DesignConfig) -> list
                 summary_report=base / flow.summary_name,
                 rendered_deck=base / f"{design.name}_{flow_name}.svrf",
                 log_path=base / f"{design.name}_{flow_name}.log",
-                width_um=design.size_um[0],
-                height_um=design.size_um[1],
+                width_um=width_um,
+                height_um=height_um,
             )
         )
     return tasks

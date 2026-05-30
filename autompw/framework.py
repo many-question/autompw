@@ -30,7 +30,8 @@ def generate_framework(config: ProjectConfig, output_path: Path | None = None) -
 def generate_blank_placeholder(config: ProjectConfig, design: DesignConfig, output_path: Path) -> Path:
     layout = make_layout(config.gds.dbu_um)
     top = layout.create_cell(f"PLACEHOLDER_{design.name}")
-    local_bbox = BBox(0.0, 0.0, design.size_um[0], design.size_um[1])
+    width, height = design.rotated_size_um
+    local_bbox = BBox(0.0, 0.0, width, height)
     marker_layer = layer_index(layout, config.layers.marker)
     top.shapes(marker_layer).insert(box_from_bbox(local_bbox, layout.dbu))
 

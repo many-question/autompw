@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Optional
 
 import typer
+import yaml
 
 import autompw
 from .assemble import assemble as assemble_gds
@@ -13,6 +14,7 @@ from .config import load_config
 from .dummy import run_mpw_dummy_fill, run_placeholders
 from .framework import generate_framework
 from .gds_io import inspect_gds, write_gds_inspection_text
+from .planner import apply_plan, generate_plan_report, plan_report_path, plan_summary_lines
 from .report import CheckItem, check_project_steps, run_check_step
 from .templates import init_process
 
@@ -106,6 +108,31 @@ def inspect(path: Path, config: Path = typer.Option(DEFAULT_CONFIG, "--config", 
     typer.echo(json.dumps(inspect_gds(path), indent=2))
 
 
+@app.command("plan")
+def plan(
+    config: Path = typer.Argument(DEFAULT_CONFIG),
+    allow_rotation: bool = typer.Option(False, "--allow-rotation", help="Allow 90 degree clockwise chip rotation."),
+) -> None:
+    project = load_config(config)
+    out = generate_plan_report(project, allow_rotation=allow_rotation)
+    report = yaml.safe_load(out.read_text(encoding="utf-8"))
+    typer.echo(f"plan report: {out}")
+    _echo_plan_summary(report)
+
+
+@app.command("useplan")
+def useplan(plan_number: int = typer.Argument(...), config: Path = typer.Argument(DEFAULT_CONFIG)) -> None:
+    try:
+        config_path, backup = apply_plan(config, plan_number, report_path=None)
+    except ValueError as exc:
+        typer.echo(f"ERROR: {exc}")
+        raise typer.Exit(1)
+    typer.echo(f"backup: {backup}")
+    typer.echo(f"updated: {config_path}")
+    project = load_config(config_path)
+    typer.echo(f"plan report: {plan_report_path(project)}")
+
+
 def _run_check_steps(project, probe_calibre: bool) -> list[CheckItem]:
     items = []
     for step in check_project_steps(project, probe_calibre=probe_calibre):
@@ -129,6 +156,11 @@ def _check_item_dict(item: CheckItem) -> dict[str, object]:
         "message": item.message,
         "issues": [issue.__dict__ for issue in item.issues],
     }
+
+
+def _echo_plan_summary(report: dict[str, object]) -> None:
+    for line in plan_summary_lines(report):
+        typer.echo(line)
 
 
 if __name__ == "__main__":

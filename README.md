@@ -130,6 +130,8 @@ autompw dummy-fill [CONFIG.yaml] [--dry-run]
 autompw placeholders [CONFIG.yaml] [--dry-run]
 autompw assemble [CONFIG.yaml]
 autompw all [CONFIG.yaml] [--dry-run-calibre]
+autompw plan [CONFIG.yaml]
+autompw useplan PLAN_NUMBER [CONFIG.yaml]
 autompw inspect-gds FILE.gds [--config CONFIG.yaml]
 ```
 
@@ -276,6 +278,44 @@ dry-run Calibre：
 ```bash
 autompw all --dry-run-calibre
 ```
+
+### `plan`
+
+搜索当前配置中各子设计的可重复拼版方案：
+
+```bash
+autompw plan
+```
+
+`plan` 使用递归直线切割（guillotine packing）模型，默认要求当前配置中的每一种 design 至少保留一颗，并按 `spacing.design_to_design_um` 预留子版块之间的切割/间距通道。默认只搜索不旋转的方案；如果工艺允许芯片旋转，可以显式打开顺时针 `90` 度旋转搜索：
+
+```bash
+autompw plan --allow-rotation
+```
+
+输出报告写入：
+
+```text
+output/placement_plan.yaml
+```
+
+报告中每个方案都有连续编号、面积利用率、实例数量、整体 bbox、每种 design 的数量、每个实例的坐标/旋转角度，以及递归切割树。坐标均为最终 MPW 坐标，`rotation` 为顺时针角度。控制台会同时打印一个易读摘要：方案总数、利用率范围、芯片数量范围，以及包含 plan id、利用率和各 design 数量的表格；同一份摘要也会作为 YAML 文件开头的注释写入报告。
+
+### `useplan`
+
+把 `plan` 报告中的某个方案应用回配置文件：
+
+```bash
+autompw useplan 1
+```
+
+如果还没有 `output/placement_plan.yaml`，`useplan` 会先自动运行默认不旋转的 `plan` 生成报告；如果想应用带旋转搜索的方案，需要先运行 `autompw plan --allow-rotation`。应用方案前会备份原配置，备份文件名形如：
+
+```text
+mpw_config.yaml.bak_useplan_YYYYMMDD_HHMMSS
+```
+
+应用后，`designs` 会被替换为所选方案中的所有实例。重复实例会自动追加 `_2`、`_3` 等后缀；所有实例使用 `anchor: bottom_left`，并写入对应的 `coord` 和 `rotation`。
 
 ### `inspect-gds`
 
@@ -435,6 +475,7 @@ designs:
     size_um: [1000, 1000]
     coord: [0, 0]
     anchor: bottom_left
+    rotation: 0
     bottom_left: [0, 0]
     replace_with_placeholder: false
 ```
@@ -458,7 +499,9 @@ top_right
 - `false`：最终拼合时使用原始子设计 GDS
 - `true`：最终拼合时使用该子设计对应的 placeholder GDS
 
-`bottom_left` 是该子设计 GDS 内实际芯片区域的左下角坐标，单位为 um，默认 `[0, 0]`。assemble 时程序会把这个点对齐到 framework 为该子设计预留的 bbox 左下角。这样即使原始 GDS 的实际芯片不在本地原点，也可以正确落到 MPW 预留位置。
+`rotation` 是顺时针旋转角度，支持 `0`、`90`、`180` 和 `270`，默认 `0`。`size_um` 始终描述原始 GDS 中芯片区域的宽高；设置旋转后，AutoMPW 会用旋转后的外接宽高计算 `anchor`、framework marker、dummy blocker、edge fill 和 placeholder blank GDS。最终 assemble 时，原始子 GDS 会按该角度旋转后再放入预留 bbox。
+
+`bottom_left` 是该子设计 GDS 内实际芯片区域的左下角坐标，单位为 um，默认 `[0, 0]`。assemble 时程序会用 `bottom_left` 和 `size_um` 推导源芯片区域；若设置了 `rotation`，先旋转该区域，再把旋转后区域的左下角对齐到 framework 为该子设计预留的 bbox 左下角。这样即使原始 GDS 的实际芯片不在本地原点，也可以正确落到 MPW 预留位置。
 
 ## Calibre deck 渲染机制
 

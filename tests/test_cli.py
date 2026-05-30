@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import klayout.db as kdb
+import yaml
 from typer.testing import CliRunner
 
 from autompw.cli import app
@@ -132,6 +133,50 @@ def test_inspect_gds_reports_sram_capacity(tmp_path: Path):
     assert "512x80" in text
     assert "bits=40960" in text
     assert "count=6" in text
+
+
+def test_plan_outputs_readable_summary_and_allow_rotation_option(tmp_path: Path):
+    config = tmp_path / "config.yaml"
+    config.write_text(
+        """
+mpw:
+  name: MPW_TEST
+  size_um: [100, 100]
+spacing:
+  design_to_design_um: 10
+layers:
+  marker: [0, 0]
+output:
+  output_dir: ./output
+  framework_gds: framework.gds
+  final_gds: final.gds
+designs:
+  - name: wide
+    gds: ./wide.gds
+    size_um: [60, 40]
+    coord: [0, 0]
+    anchor: bottom_left
+  - name: small
+    gds: ./small.gds
+    size_um: [30, 30]
+    coord: [0, 0]
+    anchor: bottom_left
+""",
+        encoding="utf-8",
+    )
+
+    result = CliRunner().invoke(app, ["plan", str(config), "--allow-rotation"])
+
+    assert result.exit_code == 0
+    assert "Total plans:" in result.output
+    assert "Utilization range:" in result.output
+    assert "Instance count range:" in result.output
+    assert "plan id" in result.output
+    assert "utilization" in result.output
+    assert "wide" in result.output
+    assert "small" in result.output
+    report = yaml.safe_load((tmp_path / "output" / "placement_plan.yaml").read_text(encoding="utf-8"))
+    assert report["metadata"]["allow_rotation"] is True
 
 
 def _write_sample_gds(path: Path) -> None:

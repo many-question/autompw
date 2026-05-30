@@ -76,3 +76,34 @@ designs:
     loaded = load_config(config)
 
     assert loaded.inspect.sram_prefixes == ("TS1N28HPCPLVTB", "TS1N28HPCPHVTB")
+
+
+def test_load_config_with_rotation_uses_rotated_bbox_for_anchor(tmp_path: Path):
+    config = tmp_path / "config.yaml"
+    config.write_text(
+        """
+mpw:
+  name: MPW_TEST
+  size_um: [1000, 800]
+layers:
+  marker: [0, 0]
+output:
+  framework_gds: ./build/framework.gds
+  final_gds: ./build/final.gds
+designs:
+  - name: block_a
+    gds: ./block_a.gds
+    size_um: [100, 200]
+    coord: [500, 400]
+    anchor: center
+    rotation: 90
+""",
+        encoding="utf-8",
+    )
+
+    loaded = load_config(config)
+    design = loaded.designs[0]
+
+    assert design.rotation == 90
+    assert design.rotated_size_um == (200.0, 100.0)
+    assert design.bbox.as_list() == [400.0, 350.0, 600.0, 450.0]
