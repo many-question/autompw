@@ -47,7 +47,7 @@ designs:
     assert report_path == plan_report_path(project)
     assert report_text.startswith("# Placement plan summary\n")
     assert "# Total plans:" in report_text
-    assert "# plan id" in report_text
+    assert "# id  util    total" in report_text
     assert report["metadata"]["requires_each_configured_design"] is True
     assert report["metadata"]["mpw_origin_um"] == [5.0, 7.0]
     assert report["metadata"]["allow_rotation"] is False

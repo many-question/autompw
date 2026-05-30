@@ -110,7 +110,7 @@ def plan_summary_lines(report: dict[str, Any]) -> list[str]:
         "",
     ]
 
-    headers = ["plan id", "utilization", *names]
+    headers = ["id", "util", "total", *names]
     rows = []
     for plan in plans:
         counts = plan.get("counts") or {}
@@ -118,6 +118,7 @@ def plan_summary_lines(report: dict[str, Any]) -> list[str]:
             [
                 str(plan["id"]),
                 f"{float(plan['utilization_percent']):.2f}%",
+                str(plan["instance_count"]),
                 *[str(counts.get(name, 0)) for name in names],
             ]
         )

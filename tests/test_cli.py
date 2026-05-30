@@ -171,8 +171,9 @@ designs:
     assert "Total plans:" in result.output
     assert "Utilization range:" in result.output
     assert "Instance count range:" in result.output
-    assert "plan id" in result.output
-    assert "utilization" in result.output
+    assert "id" in result.output
+    assert "util" in result.output
+    assert "total" in result.output
     assert "wide" in result.output
     assert "small" in result.output
     report = yaml.safe_load((tmp_path / "output" / "placement_plan.yaml").read_text(encoding="utf-8"))
