@@ -53,6 +53,7 @@ def build_plan_report(config: ProjectConfig, allow_rotation: bool = False) -> di
             "requires_each_configured_design": True,
             "allow_rotation": allow_rotation,
             "rotation_degrees_clockwise": planner.rotations,
+            "placement_strategy": "guillotine_min_spacing_then_expand_to_mpw_edges",
             "generated_at": datetime.now().isoformat(timespec="seconds"),
             "plan_count": len(plans),
         },
@@ -226,7 +227,9 @@ class _GuillotinePlanner:
                 continue
             bbox, tree = min(boxes.items(), key=lambda item: (item[0][0] * item[0][1], max(item[0])))
             plans.append(self._report_plan(len(plans) + 1, count, bbox, tree))
-        plans.sort(key=lambda plan: (-plan["utilization_percent"], -plan["instance_count"], plan["bbox_area_um2"]))
+        plans.sort(
+            key=lambda plan: (-plan["utilization_percent"], -plan["instance_count"], plan["compact_bbox_area_um2"])
+        )
         for index, plan in enumerate(plans, start=1):
             plan["id"] = index
         return plans
@@ -267,8 +270,9 @@ class _GuillotinePlanner:
         tree: object,
     ) -> dict[str, Any]:
         placements: list[dict[str, Any]] = []
-        cut_tree = self._tree_report(tree, 0, 0, placements)
-        bbox_um = [self._to_um(bbox[0]), self._to_um(bbox[1])]
+        cut_tree = self._expanded_tree_report(tree, 0, 0, self.width, self.height, placements)
+        compact_bbox_um = [self._to_um(bbox[0]), self._to_um(bbox[1])]
+        bbox_um = [self.config.mpw.size_um[0], self.config.mpw.size_um[1]]
         used_area = sum(count[i] * self.areas_um2[i] for i in range(len(count)))
         placements.sort(key=lambda item: (item["x_um"], item["y_um"], item["source_design"], item["rotation"]))
         for index, placement in enumerate(placements, start=1):
@@ -278,6 +282,8 @@ class _GuillotinePlanner:
             "utilization_percent": round(used_area / self.container_area_um2 * 100, 6),
             "used_area_um2": round(used_area, 6),
             "instance_count": sum(count),
+            "compact_bbox_um": compact_bbox_um,
+            "compact_bbox_area_um2": round(compact_bbox_um[0] * compact_bbox_um[1], 6),
             "bbox_um": bbox_um,
             "bbox_area_um2": round(bbox_um[0] * bbox_um[1], 6),
             "counts": {self.designs[i].name: count[i] for i in range(len(count)) if count[i]},
@@ -285,18 +291,28 @@ class _GuillotinePlanner:
             "cut_tree": cut_tree,
         }
 
-    def _tree_report(self, tree: object, x: int, y: int, placements: list[dict[str, Any]]) -> dict[str, Any]:
-        width, height = self._tree_size(tree)
-        region = [self._to_um(x), self._to_um(y), self._to_um(width), self._to_um(height)]
+    def _expanded_tree_report(
+        self,
+        tree: object,
+        x: int,
+        y: int,
+        width: int,
+        height: int,
+        placements: list[dict[str, Any]],
+    ) -> dict[str, Any]:
+        region = self._region_um(x, y, width, height)
         if isinstance(tree, _Leaf):
             design = self.designs[tree.design_index]
+            chip_width, chip_height = self._tree_size(tree)
+            chip_x = self._align_leaf_axis(x, width, chip_width, self.width)
+            chip_y = self._align_leaf_axis(y, height, chip_height, self.height)
             placement = {
                 "source_design": design.name,
                 "rotation": tree.rotation,
-                "x_um": self._to_um(x) + self.config.mpw.origin[0],
-                "y_um": self._to_um(y) + self.config.mpw.origin[1],
-                "width_um": self._to_um(width),
-                "height_um": self._to_um(height),
+                "x_um": self._to_um(chip_x) + self.config.mpw.origin[0],
+                "y_um": self._to_um(chip_y) + self.config.mpw.origin[1],
+                "width_um": self._to_um(chip_width),
+                "height_um": self._to_um(chip_height),
             }
             placements.append(placement)
             return {
@@ -304,29 +320,65 @@ class _GuillotinePlanner:
                 "source_design": design.name,
                 "rotation": tree.rotation,
                 "region_um": region,
+                "chip_region_um": self._region_um(chip_x, chip_y, chip_width, chip_height),
             }
         assert isinstance(tree, _Cut)
         if tree.orientation == "vertical":
-            first = self._tree_report(tree.first, x, y, placements)
-            second = self._tree_report(tree.second, x + tree.first_size[0] + self.gap, y, placements)
+            gap = width - tree.first_size[0] - tree.second_size[0]
+            first = self._expanded_tree_report(tree.first, x, y, tree.first_size[0], height, placements)
+            second = self._expanded_tree_report(
+                tree.second,
+                x + tree.first_size[0] + gap,
+                y,
+                tree.second_size[0],
+                height,
+                placements,
+            )
             return {
                 "type": "vertical_cut",
                 "region_um": region,
-                "cut_x_um": self._to_um(x + tree.first_size[0]),
-                "gap_um": self._to_um(self.gap),
+                "cut_x_um": self._to_um(x + tree.first_size[0]) + self.config.mpw.origin[0],
+                "gap_um": self._to_um(gap),
                 "left": first,
                 "right": second,
             }
-        first = self._tree_report(tree.first, x, y, placements)
-        second = self._tree_report(tree.second, x, y + tree.first_size[1] + self.gap, placements)
+        gap = height - tree.first_size[1] - tree.second_size[1]
+        first = self._expanded_tree_report(tree.first, x, y, width, tree.first_size[1], placements)
+        second = self._expanded_tree_report(
+            tree.second,
+            x,
+            y + tree.first_size[1] + gap,
+            width,
+            tree.second_size[1],
+            placements,
+        )
         return {
             "type": "horizontal_cut",
             "region_um": region,
-            "cut_y_um": self._to_um(y + tree.first_size[1]),
-            "gap_um": self._to_um(self.gap),
+            "cut_y_um": self._to_um(y + tree.first_size[1]) + self.config.mpw.origin[1],
+            "gap_um": self._to_um(gap),
             "bottom": first,
             "top": second,
         }
+
+    def _region_um(self, x: int, y: int, width: int, height: int) -> list[float]:
+        return [
+            self._to_um(x) + self.config.mpw.origin[0],
+            self._to_um(y) + self.config.mpw.origin[1],
+            self._to_um(width),
+            self._to_um(height),
+        ]
+
+    def _align_leaf_axis(self, start: int, region_size: int, chip_size: int, full_size: int) -> int:
+        if region_size <= chip_size:
+            return start
+        touches_min = start == 0
+        touches_max = start + region_size == full_size
+        if touches_min and not touches_max:
+            return start
+        if touches_max and not touches_min:
+            return start + region_size - chip_size
+        return start + (region_size - chip_size) // 2
 
     def _tree_size(self, tree: object) -> tuple[int, int]:
         if isinstance(tree, _Leaf):

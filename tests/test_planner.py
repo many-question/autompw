@@ -13,6 +13,7 @@ def test_plan_report_lists_guillotine_placements_and_useplan_updates_config(tmp_
 mpw:
   name: MPW_TEST
   size_um: [100, 100]
+  origin: [5, 7]
 spacing:
   design_to_design_um: 10
 layers:
@@ -48,12 +49,19 @@ designs:
     assert "# Total plans:" in report_text
     assert "# plan id" in report_text
     assert report["metadata"]["requires_each_configured_design"] is True
+    assert report["metadata"]["mpw_origin_um"] == [5.0, 7.0]
     assert report["metadata"]["allow_rotation"] is False
     assert report["metadata"]["rotation_degrees_clockwise"] == [0]
     assert report["plans"]
     assert report["plans"][0]["id"] == 1
     assert report["plans"][0]["placements"]
     assert "cut_tree" in report["plans"][0]
+    assert report["plans"][0]["bbox_um"] == [100.0, 100.0]
+    assert report["plans"][0]["compact_bbox_um"][0] <= 100.0
+    assert report["plans"][0]["compact_bbox_um"][1] <= 100.0
+    assert report["plans"][0]["compact_bbox_area_um2"] <= report["plans"][0]["bbox_area_um2"]
+    assert report["plans"][0]["cut_tree"]["region_um"] == [5.0, 7.0, 100.0, 100.0]
+    assert _placement_bounds(report["plans"][0]["placements"]) == [5.0, 7.0, 105.0, 107.0]
 
     updated, backup = apply_plan(config, 1)
     updated_data = yaml.safe_load(updated.read_text(encoding="utf-8"))
@@ -100,3 +108,12 @@ designs:
 
     assert report["metadata"]["allow_rotation"] is True
     assert report["metadata"]["rotation_degrees_clockwise"] == [0, 90]
+
+
+def _placement_bounds(placements: list[dict[str, object]]) -> list[float]:
+    return [
+        min(float(placement["x_um"]) for placement in placements),
+        min(float(placement["y_um"]) for placement in placements),
+        max(float(placement["x_um"]) + float(placement["width_um"]) for placement in placements),
+        max(float(placement["y_um"]) + float(placement["height_um"]) for placement in placements),
+    ]
