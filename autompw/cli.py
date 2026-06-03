@@ -15,6 +15,7 @@ from .dummy import run_mpw_dummy_fill, run_placeholders
 from .framework import generate_framework
 from .gds_io import inspect_gds, write_gds_inspection_text
 from .planner import apply_plan, generate_plan_report, plan_report_path, plan_summary_lines
+from .preview import generate_preview
 from .report import CheckItem, check_project_steps, run_check_step
 from .templates import init_process
 
@@ -118,6 +119,30 @@ def plan(
     report = yaml.safe_load(out.read_text(encoding="utf-8"))
     typer.echo(f"plan report: {out}")
     _echo_plan_summary(report)
+
+
+@app.command("preview")
+def preview(
+    config: Path = typer.Argument(DEFAULT_CONFIG),
+    output_dir: Optional[Path] = typer.Option(None, "--output-dir", "-o", help="Preview output directory."),
+    basename: str = typer.Option("placement_preview", "--basename", help="Output filename stem."),
+) -> None:
+    project = load_config(config)
+    result = generate_preview(project, output_dir=output_dir, basename=basename)
+    typer.echo(f"preview svg: {result.svg_path}")
+    typer.echo(f"preview html: {result.html_path}")
+    typer.echo(f"preview png: {result.png_path}")
+    typer.echo(f"utilization: {result.utilization_percent:.2f}%")
+    if result.cuts:
+        typer.echo(f"guillotine cuts: {len(result.cuts)}")
+    else:
+        typer.echo("guillotine cuts: not detected")
+    if result.issues:
+        typer.echo(f"issues: {len(result.issues)}")
+        for issue in result.issues:
+            typer.echo(f"  - {issue.severity.upper()} {issue.kind}: {issue.message}")
+    else:
+        typer.echo("issues: none")
 
 
 @app.command("useplan")

@@ -180,6 +180,50 @@ designs:
     assert report["metadata"]["allow_rotation"] is True
 
 
+def test_preview_outputs_files_and_console_summary(tmp_path: Path):
+    config = tmp_path / "config.yaml"
+    config.write_text(
+        """
+mpw:
+  name: MPW_TEST
+  size_um: [100, 100]
+spacing:
+  design_to_design_um: 10
+layers:
+  marker: [0, 0]
+output:
+  output_dir: ./output
+  framework_gds: framework.gds
+  final_gds: final.gds
+designs:
+  - name: left
+    gds: ./left.gds
+    size_um: [40, 100]
+    coord: [0, 0]
+    anchor: bottom_left
+  - name: right
+    gds: ./right.gds
+    size_um: [40, 100]
+    coord: [60, 0]
+    anchor: bottom_left
+""",
+        encoding="utf-8",
+    )
+
+    result = CliRunner().invoke(app, ["preview", str(config)])
+
+    assert result.exit_code == 0
+    assert "preview svg:" in result.output
+    assert "preview html:" in result.output
+    assert "preview png:" in result.output
+    assert "utilization: 80.00%" in result.output
+    assert "guillotine cuts: 1" in result.output
+    assert "issues: none" in result.output
+    assert (tmp_path / "output" / "placement_preview.svg").exists()
+    assert (tmp_path / "output" / "placement_preview.html").exists()
+    assert (tmp_path / "output" / "placement_preview.png").exists()
+
+
 def _write_sample_gds(path: Path) -> None:
     layout = kdb.Layout()
     layout.dbu = 0.001
