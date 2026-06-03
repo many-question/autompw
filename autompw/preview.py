@@ -12,6 +12,62 @@ from .config import DesignConfig, ProjectConfig
 from .geometry import BBox
 
 PREVIEW_BASENAME = "placement_preview"
+CUT_GAP_COLOR = "#d1d5db"
+CUT_LANE_COLOR = "#64748b"
+CUT_LABEL_COLOR = "#111827"
+CUT_LABEL_TEXT_COLOR = "#ffffff"
+
+FONT_5X7 = {
+    " ": ("00000", "00000", "00000", "00000", "00000", "00000", "00000"),
+    "0": ("01110", "10001", "10011", "10101", "11001", "10001", "01110"),
+    "1": ("00100", "01100", "00100", "00100", "00100", "00100", "01110"),
+    "2": ("01110", "10001", "00001", "00010", "00100", "01000", "11111"),
+    "3": ("11110", "00001", "00001", "01110", "00001", "00001", "11110"),
+    "4": ("00010", "00110", "01010", "10010", "11111", "00010", "00010"),
+    "5": ("11111", "10000", "10000", "11110", "00001", "00001", "11110"),
+    "6": ("01110", "10000", "10000", "11110", "10001", "10001", "01110"),
+    "7": ("11111", "00001", "00010", "00100", "01000", "01000", "01000"),
+    "8": ("01110", "10001", "10001", "01110", "10001", "10001", "01110"),
+    "9": ("01110", "10001", "10001", "01111", "00001", "00001", "01110"),
+    "A": ("01110", "10001", "10001", "11111", "10001", "10001", "10001"),
+    "B": ("11110", "10001", "10001", "11110", "10001", "10001", "11110"),
+    "C": ("01110", "10001", "10000", "10000", "10000", "10001", "01110"),
+    "D": ("11110", "10001", "10001", "10001", "10001", "10001", "11110"),
+    "E": ("11111", "10000", "10000", "11110", "10000", "10000", "11111"),
+    "F": ("11111", "10000", "10000", "11110", "10000", "10000", "10000"),
+    "G": ("01110", "10001", "10000", "10111", "10001", "10001", "01110"),
+    "H": ("10001", "10001", "10001", "11111", "10001", "10001", "10001"),
+    "I": ("01110", "00100", "00100", "00100", "00100", "00100", "01110"),
+    "J": ("00001", "00001", "00001", "00001", "10001", "10001", "01110"),
+    "K": ("10001", "10010", "10100", "11000", "10100", "10010", "10001"),
+    "L": ("10000", "10000", "10000", "10000", "10000", "10000", "11111"),
+    "M": ("10001", "11011", "10101", "10101", "10001", "10001", "10001"),
+    "N": ("10001", "11001", "10101", "10011", "10001", "10001", "10001"),
+    "O": ("01110", "10001", "10001", "10001", "10001", "10001", "01110"),
+    "P": ("11110", "10001", "10001", "11110", "10000", "10000", "10000"),
+    "Q": ("01110", "10001", "10001", "10001", "10101", "10010", "01101"),
+    "R": ("11110", "10001", "10001", "11110", "10100", "10010", "10001"),
+    "S": ("01111", "10000", "10000", "01110", "00001", "00001", "11110"),
+    "T": ("11111", "00100", "00100", "00100", "00100", "00100", "00100"),
+    "U": ("10001", "10001", "10001", "10001", "10001", "10001", "01110"),
+    "V": ("10001", "10001", "10001", "10001", "10001", "01010", "00100"),
+    "W": ("10001", "10001", "10001", "10101", "10101", "10101", "01010"),
+    "X": ("10001", "10001", "01010", "00100", "01010", "10001", "10001"),
+    "Y": ("10001", "10001", "01010", "00100", "00100", "00100", "00100"),
+    "Z": ("11111", "00001", "00010", "00100", "01000", "10000", "11111"),
+    "-": ("00000", "00000", "00000", "11111", "00000", "00000", "00000"),
+    "_": ("00000", "00000", "00000", "00000", "00000", "00000", "11111"),
+    ".": ("00000", "00000", "00000", "00000", "00000", "01100", "01100"),
+    ":": ("00000", "01100", "01100", "00000", "01100", "01100", "00000"),
+    "/": ("00001", "00010", "00010", "00100", "01000", "01000", "10000"),
+    "%": ("11001", "11010", "00010", "00100", "01000", "01011", "10011"),
+    "(": ("00010", "00100", "01000", "01000", "01000", "00100", "00010"),
+    ")": ("01000", "00100", "00010", "00010", "00010", "00100", "01000"),
+    "|": ("00100", "00100", "00100", "00100", "00100", "00100", "00100"),
+    ",": ("00000", "00000", "00000", "00000", "01100", "01100", "01000"),
+    "#": ("01010", "01010", "11111", "01010", "11111", "01010", "01010"),
+    "?": ("01110", "10001", "00001", "00010", "00100", "00000", "00100"),
+}
 
 
 @dataclass(frozen=True)
@@ -99,6 +155,10 @@ def _utilization_percent(config: ProjectConfig, designs: list[PreviewDesign]) ->
     used = sum(item.bbox.width * item.bbox.height for item in designs)
     total = config.mpw.size_um[0] * config.mpw.size_um[1]
     return round(used / total * 100, 6) if total else 0.0
+
+
+def _utilization_text(config: ProjectConfig, designs: list[PreviewDesign]) -> str:
+    return f"{_utilization_percent(config, designs):.2f}%"
 
 
 def _placement_issues(config: ProjectConfig, designs: list[PreviewDesign]) -> list[PreviewIssue]:
@@ -301,7 +361,7 @@ def _render_svg(
     lines = [
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">',
         "<style>",
-        "text{font-family:Arial,Helvetica,sans-serif;fill:#1f2933}.title{font-size:18px;font-weight:700}.meta{font-size:12px;fill:#4b5563}.chip-label{font-size:12px;font-weight:700}.chip-sub{font-size:10px;fill:#111827}.axis{font-size:10px;fill:#4b5563}.chip{stroke:#1f2937;stroke-width:1.4}.cut{fill:#94a3b8;opacity:.28}.overlap{fill:#ef4444;opacity:.46}.clearance{fill:#f59e0b;opacity:.46}.outside{fill:none;stroke:#ef4444;stroke-width:3;stroke-dasharray:7 5}.warnline{stroke:#f59e0b;stroke-width:3;stroke-dasharray:7 5}",
+        "text{font-family:Arial,Helvetica,sans-serif;fill:#1f2933}.title{font-size:18px;font-weight:700}.meta{font-size:12px;fill:#4b5563}.chip-label{font-size:12px;font-weight:700}.chip-sub{font-size:10px;fill:#111827}.axis{font-size:10px;fill:#4b5563}.chip{stroke:#1f2937;stroke-width:1.4}.cut-gap{fill:#d1d5db;opacity:.42}.cut-lane{fill:#64748b;opacity:.62}.cut-label-box{fill:#111827;stroke:#ffffff;stroke-width:1.5}.cut-label{font-size:12px;font-weight:700;fill:#ffffff;text-anchor:middle;dominant-baseline:central}.overlap{fill:#ef4444;opacity:.46}.clearance{fill:#f59e0b;opacity:.46}.outside{fill:none;stroke:#ef4444;stroke-width:3;stroke-dasharray:7 5}.warnline{stroke:#f59e0b;stroke-width:3;stroke-dasharray:7 5}",
         "</style>",
         '<rect width="100%" height="100%" fill="#f8fafc"/>',
         f'<text class="title" x="{margin:.0f}" y="26">AutoMPW Placement Preview</text>',
@@ -314,8 +374,13 @@ def _render_svg(
         f'<rect {rect_attrs(mpw)} fill="#ffffff" stroke="#111827" stroke-width="2"/>',
     ]
 
-    for cut in cuts:
-        lines.append(f'<rect class="cut" {rect_attrs(cut.bbox)}/>')
+    for index, cut in enumerate(cuts, start=1):
+        lane = _cut_lane_bbox(cut, config.spacing_design_to_design_um)
+        label_x, label_y = _bbox_center(lane)
+        lines.append(f'<rect class="cut-gap" {rect_attrs(cut.bbox)}/>')
+        lines.append(f'<rect class="cut-lane" {rect_attrs(lane)}/>')
+        lines.append(f'<circle class="cut-label-box" cx="{sx(label_x):.3f}" cy="{sy(label_y):.3f}" r="11"/>')
+        lines.append(f'<text class="cut-label" x="{sx(label_x):.3f}" y="{sy(label_y):.3f}">{index}</text>')
     for issue in issues:
         if issue.kind == "overlap" and issue.bbox is not None:
             lines.append(f'<rect class="overlap" {rect_attrs(issue.bbox)}/>')
@@ -371,9 +436,10 @@ def _render_svg(
     side_y += 10
     lines.append(f'<text class="title" x="{side_x:.0f}" y="{side_y:.0f}">Cuts</text>')
     side_y += 22
-    for cut in cuts[:12]:
+    for index, cut in enumerate(cuts[:12], start=1):
         label = (
-            f"{cut.orientation} gap {cut.bbox.width if cut.orientation == 'vertical' else cut.bbox.height:.1f}um "
+            f"#{index} {cut.orientation} lane {config.spacing_design_to_design_um:.1f}um, "
+            f"gap {cut.bbox.width if cut.orientation == 'vertical' else cut.bbox.height:.1f}um "
             f"({cut.left_count}|{cut.right_count})"
         )
         lines.append(f'<text class="meta" x="{side_x:.0f}" y="{side_y:.0f}">{_esc(label)}</text>')
@@ -423,11 +489,12 @@ def _render_html(
         f"<td>{index}</td>"
         f"<td>{_esc(cut.orientation)}</td>"
         f"<td>{_fmt_bbox(cut.bbox)}</td>"
+        f"<td>{config.spacing_design_to_design_um:.3f}</td>"
         f"<td>{cut.bbox.width if cut.orientation == 'vertical' else cut.bbox.height:.3f}</td>"
         f"<td>{cut.left_count} | {cut.right_count}</td>"
         "</tr>"
         for index, cut in enumerate(cuts, start=1)
-    ) or '<tr><td colspan="5">No full guillotine slicing tree detected.</td></tr>'
+    ) or '<tr><td colspan="6">No full guillotine slicing tree detected.</td></tr>'
     return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -455,7 +522,7 @@ def _render_html(
   <h2>Issues</h2>
   <table><thead><tr><th>severity</th><th>kind</th><th>message</th></tr></thead><tbody>{issue_rows}</tbody></table>
   <h2>Guillotine Slicing</h2>
-  <table><thead><tr><th>#</th><th>orientation</th><th>gap bbox um</th><th>gap width um</th><th>split counts</th></tr></thead><tbody>{cut_rows}</tbody></table>
+  <table><thead><tr><th>#</th><th>orientation</th><th>gap bbox um</th><th>lane width um</th><th>gap width um</th><th>split counts</th></tr></thead><tbody>{cut_rows}</tbody></table>
   <h2>Designs</h2>
   <table><thead><tr><th>name</th><th>bbox um</th><th>rotation</th><th>anchor</th><th>placeholder</th></tr></thead><tbody>{design_rows}</tbody></table>
 </body>
@@ -471,20 +538,23 @@ def _write_preview_png(
     cuts: list[PreviewCut],
 ) -> None:
     mpw = config.mpw.bbox
-    margin = 36
-    max_plot = 1200
+    margin = 44
+    top_margin = 82
+    bottom_margin = 42
+    side_w = 360
+    max_plot = 1050
     scale = min(max_plot / mpw.width, max_plot / mpw.height)
     plot_w = max(1, int(round(mpw.width * scale)))
     plot_h = max(1, int(round(mpw.height * scale)))
-    width = plot_w + margin * 2
-    height = plot_h + margin * 2
+    width = plot_w + side_w + margin * 2
+    height = max(plot_h + top_margin + bottom_margin, 620)
     pixels = bytearray([248, 250, 252] * width * height)
 
     def sx(value: float) -> int:
         return int(round(margin + (value - mpw.xmin) * scale))
 
     def sy(value: float) -> int:
-        return int(round(margin + (mpw.ymax - value) * scale))
+        return int(round(top_margin + (mpw.ymax - value) * scale))
 
     def draw_rect(bbox: BBox, color: tuple[int, int, int], alpha: float = 1.0, outline: tuple[int, int, int] | None = None) -> None:
         x0 = _clamp(sx(bbox.xmin), 0, width - 1)
@@ -499,15 +569,89 @@ def _write_preview_png(
         if outline is not None:
             _draw_outline(pixels, width, height, x0, y0, x1, y1, outline)
 
+    _draw_text(pixels, width, height, margin, 16, "AUTOMPW PLACEMENT PREVIEW", (17, 24, 39), scale=3)
+    summary = (
+        f"MPW {mpw.width:.0f} X {mpw.height:.0f} UM  "
+        f"DESIGNS {len(designs)}  UTIL {_utilization_text(config, designs)}  "
+        f"SPACING {config.spacing_design_to_design_um:.1f} UM"
+    )
+    _draw_text(pixels, width, height, margin, 50, summary, (75, 85, 99), scale=2, max_width=plot_w + side_w)
+
     draw_rect(mpw, (255, 255, 255), outline=(17, 24, 39))
     for cut in cuts:
-        draw_rect(cut.bbox, (148, 163, 184), alpha=0.35)
+        draw_rect(cut.bbox, _hex_to_rgb(CUT_GAP_COLOR), alpha=0.48)
+    for cut in cuts:
+        draw_rect(_cut_lane_bbox(cut, config.spacing_design_to_design_um), _hex_to_rgb(CUT_LANE_COLOR), alpha=0.66)
     for item in designs:
         draw_rect(item.bbox, _hex_to_rgb(item.color), alpha=0.82, outline=(31, 41, 55))
     for issue in issues:
         if issue.bbox is not None:
             color = (239, 68, 68) if issue.kind in {"overlap", "outside"} else (245, 158, 11)
             draw_rect(issue.bbox, color, alpha=0.52, outline=color)
+        elif issue.line_um is not None:
+            x1, y1, x2, y2 = issue.line_um
+            _draw_line(pixels, width, height, sx(x1), sy(y1), sx(x2), sy(y2), (245, 158, 11), thickness=4)
+
+    for item in designs:
+        x0 = sx(item.bbox.xmin) + 7
+        y0 = sy(item.bbox.ymax) + 7
+        chip_w = sx(item.bbox.xmax) - sx(item.bbox.xmin)
+        chip_h = sy(item.bbox.ymin) - sy(item.bbox.ymax)
+        text_scale = 2 if chip_w >= 90 and chip_h >= 42 else 1
+        _draw_text(pixels, width, height, x0, y0, item.design.name, (17, 24, 39), scale=text_scale, max_width=max(1, chip_w - 12))
+        if chip_h >= 58:
+            detail = f"{item.bbox.width:.0f}X{item.bbox.height:.0f} R{item.design.rotation}"
+            _draw_text(
+                pixels,
+                width,
+                height,
+                x0,
+                y0 + 9 * text_scale,
+                detail,
+                (17, 24, 39),
+                scale=1,
+                max_width=max(1, chip_w - 12),
+            )
+
+    for index, cut in enumerate(cuts, start=1):
+        label_x, label_y = _bbox_center(_cut_lane_bbox(cut, config.spacing_design_to_design_um))
+        _draw_label_box(pixels, width, height, sx(label_x), sy(label_y), str(index))
+
+    side_x = margin + plot_w + 24
+    side_y = top_margin + 4
+    _draw_text(pixels, width, height, side_x, side_y, "SUMMARY", (17, 24, 39), scale=2)
+    side_y += 28
+    for text in (
+        f"UTIL {_utilization_text(config, designs)}",
+        f"ISSUES {len(issues)}",
+        f"CUTS {len(cuts)}" if cuts else "CUTS NONE",
+    ):
+        _draw_text(pixels, width, height, side_x, side_y, text, (75, 85, 99), scale=2, max_width=side_w - 30)
+        side_y += 22
+
+    side_y += 14
+    _draw_text(pixels, width, height, side_x, side_y, "CUT ORDER", (17, 24, 39), scale=2)
+    side_y += 28
+    if cuts:
+        for index, cut in enumerate(cuts[:12], start=1):
+            gap = cut.bbox.width if cut.orientation == "vertical" else cut.bbox.height
+            orient = "V" if cut.orientation == "vertical" else "H"
+            text = f"#{index} {orient} LANE {config.spacing_design_to_design_um:.0f} GAP {gap:.0f}"
+            _draw_text(pixels, width, height, side_x, side_y, text, (75, 85, 99), scale=1, max_width=side_w - 30)
+            side_y += 14
+    else:
+        _draw_text(pixels, width, height, side_x, side_y, "NO SLICING TREE", (75, 85, 99), scale=1)
+        side_y += 14
+
+    side_y += 14
+    _draw_text(pixels, width, height, side_x, side_y, "ISSUES", (17, 24, 39), scale=2)
+    side_y += 28
+    if issues:
+        for issue in issues[:8]:
+            _draw_text(pixels, width, height, side_x, side_y, f"{issue.kind}: {issue.severity}", (75, 85, 99), scale=1, max_width=side_w - 30)
+            side_y += 14
+    else:
+        _draw_text(pixels, width, height, side_x, side_y, "NONE", (75, 85, 99), scale=1)
     _write_png(path, width, height, pixels)
 
 
@@ -528,6 +672,121 @@ def _write_png(path: Path, width: int, height: int, pixels: bytearray) -> None:
     png += chunk(b"IDAT", compressed)
     png += chunk(b"IEND", b"")
     path.write_bytes(png)
+
+
+def _cut_lane_bbox(cut: PreviewCut, lane_width_um: float) -> BBox:
+    if cut.orientation == "vertical":
+        width = min(max(lane_width_um, 0.0), cut.bbox.width)
+        center = (cut.bbox.xmin + cut.bbox.xmax) / 2
+        return BBox(center - width / 2, cut.bbox.ymin, center + width / 2, cut.bbox.ymax)
+    height = min(max(lane_width_um, 0.0), cut.bbox.height)
+    center = (cut.bbox.ymin + cut.bbox.ymax) / 2
+    return BBox(cut.bbox.xmin, center - height / 2, cut.bbox.xmax, center + height / 2)
+
+
+def _draw_text(
+    pixels: bytearray,
+    width: int,
+    height: int,
+    x: int,
+    y: int,
+    text: object,
+    color: tuple[int, int, int],
+    scale: int = 1,
+    max_width: int | None = None,
+) -> None:
+    cursor = x
+    start_x = x
+    for char in str(text).upper():
+        pattern = FONT_5X7.get(char, FONT_5X7["?"])
+        char_width = 5 * scale
+        if max_width is not None and cursor + char_width - start_x > max_width:
+            break
+        for row, bits in enumerate(pattern):
+            for col, bit in enumerate(bits):
+                if bit == "1":
+                    _draw_pixel_rect(
+                        pixels,
+                        width,
+                        height,
+                        cursor + col * scale,
+                        y + row * scale,
+                        cursor + (col + 1) * scale,
+                        y + (row + 1) * scale,
+                        color,
+                    )
+        cursor += 6 * scale
+
+
+def _text_width(text: object, scale: int = 1) -> int:
+    value = str(text)
+    if not value:
+        return 0
+    return len(value) * 6 * scale - scale
+
+
+def _draw_label_box(pixels: bytearray, width: int, height: int, center_x: int, center_y: int, text: object) -> None:
+    scale = 2
+    box_w = max(22, _text_width(text, scale=scale) + 10)
+    box_h = 7 * scale + 8
+    x0 = center_x - box_w // 2
+    y0 = center_y - box_h // 2
+    x1 = x0 + box_w
+    y1 = y0 + box_h
+    _draw_pixel_rect(pixels, width, height, x0, y0, x1, y1, _hex_to_rgb(CUT_LABEL_COLOR))
+    _draw_outline(pixels, width, height, x0, y0, x1, y1, _hex_to_rgb(CUT_LABEL_TEXT_COLOR))
+    _draw_text(
+        pixels,
+        width,
+        height,
+        x0 + max(1, (box_w - _text_width(text, scale=scale)) // 2),
+        y0 + 4,
+        text,
+        _hex_to_rgb(CUT_LABEL_TEXT_COLOR),
+        scale=scale,
+    )
+
+
+def _draw_pixel_rect(
+    pixels: bytearray,
+    width: int,
+    height: int,
+    x0: int,
+    y0: int,
+    x1: int,
+    y1: int,
+    color: tuple[int, int, int],
+    alpha: float = 1.0,
+) -> None:
+    x0 = _clamp(x0, 0, width)
+    x1 = _clamp(x1, 0, width)
+    y0 = _clamp(y0, 0, height)
+    y1 = _clamp(y1, 0, height)
+    if x1 <= x0 or y1 <= y0:
+        return
+    for row_y in range(y0, y1):
+        row = row_y * width * 3
+        for col_x in range(x0, x1):
+            _blend_pixel(pixels, row + col_x * 3, color, alpha)
+
+
+def _draw_line(
+    pixels: bytearray,
+    width: int,
+    height: int,
+    x0: int,
+    y0: int,
+    x1: int,
+    y1: int,
+    color: tuple[int, int, int],
+    thickness: int = 1,
+) -> None:
+    steps = max(abs(x1 - x0), abs(y1 - y0), 1)
+    half = max(0, thickness // 2)
+    for index in range(steps + 1):
+        x = round(x0 + (x1 - x0) * index / steps)
+        y = round(y0 + (y1 - y0) * index / steps)
+        _draw_pixel_rect(pixels, width, height, x - half, y - half, x + half + 1, y + half + 1, color)
 
 
 def _spacing_marker(left: BBox, right: BBox) -> tuple[BBox | None, tuple[float, float, float, float] | None]:

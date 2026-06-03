@@ -1,7 +1,8 @@
+import struct
 from pathlib import Path
 
 from autompw.config import load_config
-from autompw.preview import generate_preview
+from autompw.preview import _draw_text, generate_preview
 
 
 def test_preview_writes_svg_html_png_and_flags_geometry_issues(tmp_path: Path):
@@ -98,3 +99,18 @@ designs:
     assert len(result.cuts) == 1
     assert result.cuts[0].orientation == "vertical"
     assert result.cuts[0].bbox.as_list() == [40.0, 0.0, 60.0, 100.0]
+    svg = result.svg_path.read_text(encoding="utf-8")
+    assert 'class="cut-lane"' in svg
+    assert 'class="cut-label"' in svg
+    assert ">1</text>" in svg
+    png = result.png_path.read_bytes()
+    width, height = struct.unpack(">II", png[16:24])
+    assert width > height
+
+
+def test_preview_bitmap_text_draws_pixels():
+    pixels = bytearray([255, 255, 255] * 30 * 20)
+
+    _draw_text(pixels, 30, 20, 1, 1, "A1", (0, 0, 0), scale=1)
+
+    assert any(value == 0 for value in pixels)
